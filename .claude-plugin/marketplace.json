@@ -1,0 +1,34 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "gntc-labs",
+  "version": "0.1.0",
+  "description": "GNTC Labs — agent skills and plugins for GNTC's products (VibeHost, EntryDesk)",
+  "owner": {
+    "name": "GNTC Labs",
+    "email": "developer@gntc.com"
+  },
+  "plugins": [
+    {
+      "name": "vibehost",
+      "description": "Agent skills for VibeHost — deploy, share, and manage static sites via the VibeHost CLI or MCP server.",
+      "version": "0.1.0",
+      "author": {
+        "name": "GNTC Labs",
+        "email": "developer@gntc.com"
+      },
+      "source": "./plugins/vibehost",
+      "category": "development"
+    },
+    {
+      "name": "entrydesk",
+      "description": "Agent skills for EntryDesk — chat with AI models and agents, schedule agents, and call connected SaaS tools (Slack, GitHub, Google Drive, …) from the terminal.",
+      "version": "0.1.0",
+      "author": {
+        "name": "GNTC Labs",
+        "email": "developer@gntc.com"
+      },
+      "source": "./plugins/entrydesk",
+      "category": "productivity"
+    }
+  ]
+}

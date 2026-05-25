@@ -1,0 +1,9 @@
+{
+  "name": "vibehost",
+  "description": "Agent skills for VibeHost — deploy, share, and manage static sites via the VibeHost CLI or MCP server.",
+  "version": "0.1.0",
+  "author": {
+    "name": "GNTC Labs",
+    "email": "developer@gntc.com"
+  }
+}
