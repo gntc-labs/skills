@@ -1,11 +1,11 @@
 ---
 name: vibehost-deploy
-description: Deploy a static site to VibeHost and get a private shareable URL. Use when the user wants to ship, host, preview, or publish a built static frontend.
+description: Deploy a static site or Next.js app to VibeHost and get a private shareable URL. Use when the user wants to ship, host, preview, or publish a built frontend or Next.js app.
 ---
 
 # Deploy to VibeHost
 
-Take a built static site and put it live on VibeHost at a private URL in seconds.
+Take a built static site or Next.js app and put it live on VibeHost at a private URL in seconds.
 
 ## When this skill applies
 
@@ -15,21 +15,33 @@ The user says something like:
 - "get me a preview URL for this build"
 - "send this to staging / a demo link"
 
-Or you've just produced a static build output (`dist/`, `out/`, `build/`) and the natural next step is hosting it.
+Or you've just produced a static build output (`dist/`, `out/`, `build/`) or a Next.js build, and the natural next step is hosting it.
 
 If the user has no VibeHost account yet, point them at <https://vibehost.com/signup> — deploying requires an authenticated session.
 
 ## Setup
 
+Install the CLI by downloading the installer, reviewing it, then running it — don't pipe it straight into a shell:
+
 ```bash
-curl -fsSL https://vibehost.com/install.sh | sh   # macOS / Linux; one static binary
+# macOS / Linux; installs one static binary, user-level only (no sudo)
+curl -fsSL -o vibehost-install.sh https://vibehost.com/install.sh
+less vibehost-install.sh   # review it first: the script verifies the CLI binary's
+                           # SHA256 against the release manifest before installing
+sh vibehost-install.sh && rm vibehost-install.sh
+
 vibehost login        # device-flow browser login; or VIBEHOST_TOKEN env var for headless/CI
 vibehost whoami        # confirm session + which workspace is active
 ```
 
+The installer writes only to `~/.vibehost/` and a bin shim in `~/.local/bin` — no shell-profile edits, no root. It sends an anonymous install beacon (platform, shell version, success/fail); opt out with `VIBEHOST_NO_TELEMETRY=1`.
+
 Auth can come from any of: a prior `vibehost login` (token in `~/.config/vibehost/config.json`), a `VIBEHOST_TOKEN` PAT in the environment (headless/CI), or an MCP OAuth session on `https://api.vibehost.com/mcp`. Most commands accept `--json` for scriptable output — prefer it when parsing.
 
-You also need a **static build output directory** with an `index.html` at its root (`dist/`, `out/`, `build/`, or plain HTML). If the user has no account yet, point them at <https://vibehost.com/signup>.
+## What VibeHost can host
+
+- **Static sites** (default runtime) — any directory with an `index.html` at its root (`dist/`, `out/`, `build/`, or plain HTML).
+- **Next.js apps (private beta)** — opt in with `--runtime nextjs`. App Router, SSR, ISR, server actions, and image optimisation are supported; prerender-only builds are auto-served via the static fast-path (no container). Apps that need a database can use the managed Postgres (`vibehost db`, Neon serverless) instead of an external DB. If `app create --runtime nextjs` returns `NEXTJS_RUNTIME_GATED`, the beta isn't enabled for this workspace yet — fall back to a static export (`output: 'export'` + deploy `./out`) or have the workspace owner request access.
 
 ## Recommended path: the CLI
 
@@ -38,6 +50,10 @@ The `vibehost` CLI bundles app-creation, file hashing, blob upload, and the depl
 ```bash
 vibehost app create my-app                  # once per app; name: lowercase, 2–40 chars, [a-z][a-z0-9-]*
 vibehost deploy ./dist --app my-app --json  # every time
+
+# Next.js app instead of a static build (private beta — see above):
+vibehost app create my-app --runtime nextjs --json
+vibehost deploy . --app my-app --json       # after `next build`
 ```
 
 The `--json` output is `{ ok: true, data: { url, immutableUrl, ... } }`. The command exits 0 only after the deployment is healthy, so a successful exit means the URL is live.
