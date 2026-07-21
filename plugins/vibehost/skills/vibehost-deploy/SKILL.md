@@ -26,8 +26,8 @@ Install the CLI by downloading the installer, reviewing it, then running it — 
 ```bash
 # macOS / Linux; installs one static binary, user-level only (no sudo)
 curl -fsSL -o vibehost-install.sh https://vibehost.com/install.sh
-less vibehost-install.sh   # review it first: the script verifies the CLI binary's
-                           # SHA256 against the release manifest before installing
+cat vibehost-install.sh   # review it first: the script verifies the CLI binary's
+                          # SHA256 against the release manifest before installing
 sh vibehost-install.sh && rm vibehost-install.sh
 
 vibehost login        # device-flow browser login; or VIBEHOST_TOKEN env var for headless/CI
@@ -41,7 +41,7 @@ Auth can come from any of: a prior `vibehost login` (token in `~/.config/vibehos
 ## What VibeHost can host
 
 - **Static sites** (default runtime) — any directory with an `index.html` at its root (`dist/`, `out/`, `build/`, or plain HTML).
-- **Next.js apps (private beta)** — opt in with `--runtime nextjs`. App Router, SSR, ISR, server actions, and image optimisation are supported; prerender-only builds are auto-served via the static fast-path (no container). Apps that need a database can use the managed Postgres (`vibehost db`, Neon serverless) instead of an external DB. If `app create --runtime nextjs` returns `NEXTJS_RUNTIME_GATED`, the beta isn't enabled for this workspace yet — fall back to a static export (`output: 'export'` + deploy `./out`) or have the workspace owner request access.
+- **Next.js apps (private beta)** — opt in with `--runtime nextjs`. App Router, SSR, ISR, server actions, and image optimisation are supported; prerender-only builds are auto-served via the static fast-path (no container). Apps that need a database can use the managed Postgres (`vibehost db`, Neon serverless) instead of an external DB. If `app create --runtime nextjs` returns `NEXTJS_RUNTIME_GATED`, the runtime is currently unavailable to this user/workspace (access can depend on platform, workspace, and user gates) — fall back to a static export (`output: 'export'` + deploy `./out`) or request access from the workspace owner.
 
 ## Recommended path: the CLI
 
@@ -51,9 +51,11 @@ The `vibehost` CLI bundles app-creation, file hashing, blob upload, and the depl
 vibehost app create my-app                  # once per app; name: lowercase, 2–40 chars, [a-z][a-z0-9-]*
 vibehost deploy ./dist --app my-app --json  # every time
 
-# Next.js app instead of a static build (private beta — see above):
+# Next.js app instead of a static build (private beta — see above; server build by default):
 vibehost app create my-app --runtime nextjs --json
-vibehost deploy . --app my-app --json       # after `next build`
+vibehost deploy . --app my-app --json       # sandboxed server build; no local next build required
+# Or explicitly build on the user's machine:
+vibehost deploy . --app my-app --build client --json
 ```
 
 The `--json` output is `{ ok: true, data: { url, immutableUrl, ... } }`. The command exits 0 only after the deployment is healthy, so a successful exit means the URL is live.
@@ -86,6 +88,7 @@ Always surface **both** URLs from the result:
 - **Discover ids, don't guess** — `appId` and `workspaceId` come from `list_apps` / `vibehost whoami` (or `list_workspaces`). Hardcoding a stale id fails; resolve it live each time.
 - **Read MCP tool schemas first** — when using the MCP path, the parameter shapes vary by tool and evolve over time. Read each tool's own `description` before calling it; don't assume argument shapes from this doc.
 - **Branch on `error.code`, not `error.message`** — codes are stable `SCREAMING_SNAKE_CASE`; messages can reword.
+- **Raw blob upload blocked by the edge WAF** — the CLI keeps `UPSTREAM_FAILED` but adds `details.kind = "blob_upload_blocked"`, the file path, and a `--no-chunked` hint. Retry with `vibehost deploy --no-chunked`; the gzip tarball path avoids content inspection of raw file bytes.
 
 ## Reference
 
