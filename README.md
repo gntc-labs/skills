@@ -18,6 +18,7 @@ Agent skills for [GNTC](https://gntc.com)'s products, packaged as Claude Code pl
 npx skills add gntc-labs/skills              # list + install
 npx skills add gntc-labs/skills --list       # list only
 npx skills add gntc-labs/skills --skill vibehost-deploy
+npx skills add gntc-labs/skills --skill vibehost-pumpkin-patch
 ```
 
 ## Plugins & skills
@@ -27,6 +28,7 @@ npx skills add gntc-labs/skills --skill vibehost-deploy
 | Skill | What it does |
 | --- | --- |
 | `vibehost-deploy` | Deploy a static site to VibeHost and get a private shareable URL. |
+| `vibehost-pumpkin-patch` | Roll a one-of-a-kind Halloween pumpkin patch and publish it on VibeHost. Friends who open the link grow a random pumpkin, carve it, light it and send one back. |
 
 Coming soon: `vibehost-share`, `vibehost-manage-releases`, `vibehost-custom-domains`, `vibehost-logs`.
 
@@ -45,6 +47,7 @@ plugins/
   vibehost/
     .claude-plugin/plugin.json
     skills/vibehost-deploy/SKILL.md
+    skills/vibehost-pumpkin-patch/SKILL.md   # + the template, art and build scripts it uses
   entrydesk/
     .claude-plugin/plugin.json
     skills/entrydesk-cli/SKILL.md

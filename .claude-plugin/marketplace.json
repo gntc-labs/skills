@@ -10,8 +10,8 @@
   "plugins": [
     {
       "name": "vibehost",
-      "description": "Agent skills for VibeHost — deploy, share, and manage static sites via the VibeHost CLI or MCP server.",
-      "version": "0.1.0",
+      "description": "Agent skills for VibeHost — deploy, share, and manage static sites via the VibeHost CLI or MCP server, plus a Halloween pumpkin patch you can publish in one prompt.",
+      "version": "0.2.0",
       "author": {
         "name": "GNTC Labs",
         "email": "developer@gntc.com"

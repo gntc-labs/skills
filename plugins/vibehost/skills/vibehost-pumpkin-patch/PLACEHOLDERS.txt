@@ -1,0 +1,9 @@
+PLACEHOLDER ART — every file below ships as a stand-in. build.mjs prints a warning for each one it copies.
+Swap: drop the real WebP at the same path (vibehost-pumpkin-patch/art/<path>), sized as noted. No code change needed.
+Sizes: icons 256px max side (alpha, q88) · fx/sprites 768px (alpha, q88; storm-cloud + lightning up to 1024) ·
+varieties 768px square (alpha, q88) · scenes 1600px wide 16:9 (opaque, q82). Placeholders carry the XMP marker
+'pumpkin-patch-placeholder'; a dropped real file has none, so the warning disappears by itself.
+Sprites/icons are trimmed to their visible pixels; the page sizes them by height, so any aspect ratio works.
+
+
+0 placeholder file(s).
