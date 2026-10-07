@@ -1,0 +1,171 @@
+<!-- Every number below is a RULE token (two underscores, RULE:key, two
+     underscores): build.mjs fills it in from
+     the engine's RULES, so this page can't drift from the game.
+     The rules, written once: build.mjs puts these cards into the village's
+     "How to play" overlay and into how-to-play.html. Each rule is shown in a
+     pixel mini scene (the game's own sprites) and told in a line or two. -->
+<style>
+  /* How to play, shown not told: one card per rule, each with a
+     pixel mini scene built from the game's sprites (integer scales only),
+     in the carved frame, over a line or two of text. Phone: one column;
+     wider: two. Every scene loops ≤ 2 s and stands still under reduced
+     motion. Shared by the in-game overlay and how-to-play.html. */
+  .rules { --r-void: #0d0b14; --r-night: #1d1730; --r-dusk: #3a2a52; --r-plum: #6b3d7a; --r-bone: #f2ead8; --r-candle: #ffe08a; --r-amber: #f5a623; --r-spirit: #7fe3d4; --r-blood: #a3243b; --r-lime: #a6c64b; --r-loam: #7a4b2e;
+    display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 8px 0 0; }
+  @media (min-width: 720px) { .rules { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .rules .rule { min-width: 0; padding: 8px 10px 10px; background: rgba(13,11,20,.55); border: 3px solid var(--r-dusk); box-shadow: 3px 3px 0 var(--r-void); }
+  .rules .rule h3 { margin: 8px 0 2px; font-family: "Jersey 10", ui-monospace, monospace; font-weight: 400; font-size: 26px; line-height: 1.1; color: var(--r-candle); }
+  .rules .rule p { margin: 0; font-size: 14px; line-height: 1.45; }
+  .rules .mini { display: flex; justify-content: center; border: 12px solid transparent; border-image: var(--frame) 16 fill / 12px / 0 round; image-rendering: pixelated; }
+  .rules .stage { position: relative; width: 272px; max-width: 100%; overflow: hidden; font-family: "Jersey 10", ui-monospace, monospace; font-size: 16px; line-height: 1.1; color: var(--r-bone); }
+  .rules .sp { position: absolute; image-rendering: pixelated; max-width: none; }
+  .rules .row .sp, .rules .plot .sp, .rules .setting .sp, .rules .sp.in { position: static; }
+  .rules .cell { position: relative; display: block; width: 32px; height: 32px; }
+  .rules .cell .sp:last-child { position: absolute; left: 0; top: 0; }
+  .rules .sp.in { display: inline-block; vertical-align: middle; margin-left: 2px; }
+  .rules .ico { display: inline-block; vertical-align: middle; image-rendering: pixelated; margin-block: -4px; }
+  .rules .tl { position: absolute; width: 64px; height: 64px; }
+  .rules .tl .sp { left: 0; top: 0; }
+  .rules .tag, .rules .val, .rules .float, .rules .shoo, .rules .timer, .rules .boo, .rules .cap2, .rules .bubble, .rules .sign, .rules .setting, .rules .pips, .rules .flies, .rules .ring, .rules .arr { position: absolute; white-space: nowrap; }
+  .rules .tag { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; color: var(--r-bone); background: rgba(13,11,20,.85); border: 2px solid var(--r-dusk); }
+  .rules .tag.risk { color: var(--r-bone); background: var(--r-blood); border-color: var(--r-void); }
+  .rules .tag.cap { color: var(--r-void); background: var(--r-candle); border-color: var(--r-void); }
+  .rules .tag.slow { color: var(--r-void); background: var(--r-spirit); border-color: var(--r-void); }
+  .rules .val { padding: 0 4px; color: var(--r-void); background: var(--r-candle); border: 2px solid var(--r-void); z-index: 2; }
+  .rules .float { font-size: 26px; color: var(--r-candle); text-shadow: 2px 2px 0 var(--r-void); z-index: 3; }
+  .rules .float.minus { color: var(--r-bone); text-shadow: 2px 0 0 var(--r-blood), -2px 0 0 var(--r-blood), 0 2px 0 var(--r-blood), 0 -2px 0 var(--r-blood); }
+  .rules .shoo { padding: 0 4px; color: var(--r-void); background: var(--r-spirit); z-index: 3; }
+  .rules .timer { display: flex; align-items: center; gap: 6px; padding: 4px 8px; background: rgba(13,11,20,.85); border: 2px solid var(--r-candle); }
+  .rules .timer b { font-size: 24px; font-weight: 400; color: var(--r-candle); }
+  .rules .boo { padding: 2px 10px 4px; font-size: 26px; color: var(--r-void); background: var(--r-bone); border: 3px solid var(--r-void); border-radius: 12px; box-shadow: 3px 3px 0 var(--r-void); transform: rotate(-4deg); z-index: 4; }
+  .rules .off { filter: brightness(.62) saturate(.55) sepia(.35); }
+  .rules .flies { width: 30px; height: 20px; z-index: 2; }
+  .rules .flies i { position: absolute; width: 3px; height: 3px; background: var(--r-void); box-shadow: 0 0 0 1px rgba(242,234,216,.4); }
+  .rules .flies i + i { left: 18px; top: 8px; }
+  .rules .cap2 { display: flex; flex-direction: column; align-items: center; width: 64px; gap: 2px; }
+  .rules .cap2 b { font-weight: 400; color: var(--r-candle); }
+  .rules .row { display: flex; align-items: center; gap: 3px; height: 32px; margin-bottom: 6px; }
+  .rules .row i { width: 10px; text-align: center; font-style: normal; color: var(--r-candle); }
+  .rules .row b { margin-left: 6px; font-weight: 400; white-space: nowrap; }
+  .rules .row.secret b { color: var(--r-spirit); }
+  .rules .plot { position: absolute; display: grid; grid-template-columns: repeat(3, 32px); gap: 1px; padding: 1px; background: #2f4a2c; }
+  .rules .face { background: var(--r-dusk); border: 2px solid var(--r-void); box-sizing: content-box; }
+  .rules .ring { width: 58px; height: 58px; border: 3px solid var(--r-candle); }
+  .rules .strip { position: absolute; left: 0; top: 0; width: 272px; height: 96px; background-position: -112px -12px; background-size: 480px 270px; background-repeat: no-repeat; image-rendering: pixelated; }
+  .rules .pips { display: flex; padding: 0 1px; background: rgba(13,11,20,.85); border: 1px solid var(--r-void); z-index: 2; }
+  .rules .pips .ico { margin: 0; }
+  .rules .sign { padding: 2px 6px; font-size: 15px; color: var(--r-void); background: var(--r-bone); border: 2px solid var(--r-loam); box-shadow: 2px 2px 0 var(--r-void); }
+  .rules .face.sm { z-index: 2; }
+  .rules .bubble { padding: 6px 8px; font-family: "Space Mono", ui-monospace, monospace; font-size: 13px; color: var(--r-void); background: var(--r-bone); border: 3px solid var(--r-void); box-shadow: 3px 3px 0 var(--r-void); }
+  .rules .bubble b { font-family: "Jersey 10", ui-monospace, monospace; font-weight: 400; padding: 0 4px; color: var(--r-bone); background: var(--r-plum); }
+  .rules .tag.luck { color: var(--r-void); background: var(--r-lime); border-color: var(--r-void); }
+  .rules .setting { display: flex; align-items: center; gap: 8px; width: 160px; padding: 4px 8px; font-size: 20px; border: 2px solid var(--r-dusk); background: rgba(13,11,20,.6); }
+  .rules .setting b { margin-left: auto; padding: 0 5px; font-weight: 400; font-size: 16px; color: var(--r-void); background: var(--r-lime); }
+  .rules .setting b.off { background: #9a93a6; filter: none; }
+  .rules .arr { font-size: 28px; color: var(--r-candle); font-style: normal; }
+  .rules ~ .replay { margin: 16px 0 0; text-align: center; }
+  .rules ~ .replay .btn { display: inline-flex; align-items: center; min-height: 44px; }
+
+  .rules .fields { position: absolute; left: 0; right: 0; top: 4px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .rules .fld { display: grid; grid-template-columns: repeat(var(--c), 14px); gap: 2px; padding: 2px; background: #2f4a2c; border: 2px solid var(--r-void); }
+  .rules .fld i { width: 14px; height: 14px; background: var(--r-loam); }
+  .rules .fld i.new { background: var(--r-lime); animation: r-new 2s ease-in-out infinite; }
+  .rules .arr2 { font-style: normal; font-size: 24px; color: var(--r-candle); }
+  @keyframes r-new { 0%, 30% { opacity: .25; } 60%, 100% { opacity: 1; } }
+  /* Loops (≤ 2 s). */
+  @keyframes r-bob { 50% { transform: translateY(-3px); } }
+  @keyframes r-rise { 0%, 25% { opacity: 0; transform: translateY(8px); } 45% { opacity: 1; } 100% { opacity: 0; transform: translateY(-22px); } }
+  @keyframes r-four { 0%, 40% { opacity: 1; } 45%, 100% { opacity: 0; } }
+  @keyframes r-three { 0%, 40% { opacity: 0; } 45%, 100% { opacity: 1; } }
+  @keyframes r-follow { 0% { transform: translateX(-150px); opacity: .2; } 60% { transform: translateX(0); opacity: 1; } 80% { transform: translateY(-4px); } 100% { transform: none; } }
+  @keyframes r-pop { 0%, 30% { transform: translateY(26px) scale(.5); opacity: 0; } 45% { transform: translateY(-4px) scale(1.15); opacity: 1; } 55%, 100% { transform: none; opacity: 1; } }
+  @keyframes r-boo { 0%, 40% { transform: rotate(-4deg) scale(0); opacity: 0; } 52% { transform: rotate(3deg) scale(1.2); opacity: 1; } 60%, 100% { transform: rotate(-4deg); opacity: 1; } }
+  @keyframes r-fly { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(10px, -5px); } 50% { transform: translate(4px, 6px); } 75% { transform: translate(-5px, -3px); } }
+  @keyframes r-drop { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 55% { transform: translateY(30px); opacity: 1; } 60%, 100% { transform: translateY(30px); opacity: 0; } }
+  @keyframes r-ring { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.35); opacity: 0; } }
+  @keyframes r-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+  @keyframes r-pulse { 50% { box-shadow: 0 0 0 3px var(--r-candle); } }
+  .rules .ripe { animation: r-bob 2s ease-in-out infinite; }
+  .rules .v4 { animation: r-four 2s steps(1) infinite; }
+  .rules .v3 { animation: r-three 2s steps(1) infinite; }
+  .rules .float { animation: r-rise 2s ease-out infinite; }
+  .rules .follow { animation: r-follow 2s ease-out infinite; }
+  .rules .pop { animation: r-pop 2s ease-out infinite; }
+  .rules .boo { animation: r-boo 2s ease-out infinite; }
+  .rules .flies i { animation: r-fly 1.6s linear infinite; }
+  .rules .drop { animation: r-drop 2s ease-in infinite; }
+  .rules .ring { animation: r-ring 1.2s ease-out infinite; }
+  .rules .sway { transform-origin: 50% 100%; animation: r-sway 2s ease-in-out infinite; }
+  .rules .bubble { animation: r-pulse 2s ease-in-out infinite; }
+  .rules .pips { animation: r-bob 1.4s ease-in-out infinite; }
+  .rules .setting:first-of-type .sp { animation: r-bob 1s ease-in-out infinite; }
+  /* Reduced motion: each scene is one still frame of its story. */
+  @media (prefers-reduced-motion: reduce) {
+    .rules *, .rules *::before, .rules *::after { animation: none !important; }
+    .rules .v4, .rules .float { opacity: 0; }
+    .rules .float.minus, .rules .float.plus { opacity: 1; }
+  }
+</style>
+<div class="rules">
+  <article class="rule" id="rule-farm">
+    <div class="mini" role="img" aria-label="A farmer, their scarecrow and a 3×3 plot with one sprout."><div class="stage s-farm" style="height:120px"><img class="sp face" src="__ART:avatars/farmer-1.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:14px;top:28px"><img class="sp sway" src="__ART:props/scarecrow.png__" alt="" width="64" height="96" style="width:64px;height:96px;left:92px;top:12px"><span class="plot" style="left:172px;top:12px"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="32" height="32" style="width:32px;height:32px"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="32" height="32" style="width:32px;height:32px"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="32" height="32" style="width:32px;height:32px"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="32" height="32" style="width:32px;height:32px"><span class="cell"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="32" height="32" style="width:32px;height:32px"><img class="sp" src="__ART:crops/common-sprout.png__" alt="" width="32" height="32" style="width:32px;height:32px;left:0px;top:0px"></span><img class="sp" src="__ART:tiles/soil.png__" alt="" width="32" height="32" style="width:32px;height:32px"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="32" height="32" style="width:32px;height:32px"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="32" height="32" style="width:32px;height:32px"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="32" height="32" style="width:32px;height:32px"></span></div></div>
+    <h3>Your farm</h3>
+    <p>Every teammate gets a 3×3 plot. Set it up once (name, link, farmer, scarecrow) and your house appears on the village map, with your farm on its own link.</p>
+  </article>
+  <article class="rule" id="rule-expand" data-rule="expansion">
+    <div class="mini" role="img" aria-label="A 3×3 field grows to 3×4, then 4×4, for candy each step."><div class="stage s-expand" style="height:120px"><span class="fields"><span class="fld" style="--c:3"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><i class="arr2">›</i><span class="fld" style="--c:3"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="new"></i><i class="new"></i><i class="new"></i></span><i class="arr2">›</i><span class="fld" style="--c:4"><i></i><i></i><i></i><i class="new"></i><i></i><i></i><i></i><i class="new"></i><i></i><i></i><i></i><i class="new"></i><i></i><i></i><i></i><i class="new"></i></span><span class="tag cost" style="left:84px;top:94px"><span data-fill="cost">30</span> <img class="sp in" src="__ART:props/candy.png__" alt="candy" width="16" height="16" style="width:16px;height:16px"> a step</span></span></div></div>
+    <h3>Expand your field</h3>
+    <p>Your 3×3 field can grow a row, then a column — <span data-fill="cost">30</span> candy a step, up to <span data-fill="max">4×4</span>. Tap "Expand field" under your farm and say yes (✓) — it asks first, since it costs candy. Every crop keeps its place.</p>
+  </article>
+  <article class="rule" id="rule-grow">
+    <div class="mini" role="img" aria-label="Seed, sprout, growing, ripe: Common __RULE:grow.common:long__ for __RULE:yield.common__ candy, Rare __RULE:grow.rare:long__ for __RULE:yield.rare__, Legendary __RULE:grow.legendary:long__ for __RULE:yield.legendary__; a Legendary seed grows the secret pumpkin 1% of the time."><div class="stage s-grow" style="height:152px"><div class="row"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="32" height="32" style="width:32px;height:32px"><i>›</i><img class="sp" src="__ART:crops/common-sprout.png__" alt="" width="32" height="32" style="width:32px;height:32px"><i>›</i><img class="sp" src="__ART:crops/common-growing.png__" alt="" width="32" height="32" style="width:32px;height:32px"><i>›</i><img class="sp ripe" src="__ART:crops/common-ripe.png__" alt="" width="32" height="32" style="width:32px;height:32px"><b>__RULE:grow.common__ · __RULE:yield.common__<img class="sp in" src="__ART:props/candy.png__" alt="" width="16" height="16" style="width:16px;height:16px"></b></div><div class="row"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="32" height="32" style="width:32px;height:32px"><i>›</i><img class="sp" src="__ART:crops/rare-sprout.png__" alt="" width="32" height="32" style="width:32px;height:32px"><i>›</i><img class="sp" src="__ART:crops/rare-growing.png__" alt="" width="32" height="32" style="width:32px;height:32px"><i>›</i><img class="sp ripe" src="__ART:crops/rare-ripe.png__" alt="" width="32" height="32" style="width:32px;height:32px"><b>__RULE:grow.rare__ · __RULE:yield.rare__<img class="sp in" src="__ART:props/candy.png__" alt="" width="16" height="16" style="width:16px;height:16px"></b></div><div class="row"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="32" height="32" style="width:32px;height:32px"><i>›</i><img class="sp" src="__ART:crops/legendary-sprout.png__" alt="" width="32" height="32" style="width:32px;height:32px"><i>›</i><img class="sp" src="__ART:crops/legendary-growing.png__" alt="" width="32" height="32" style="width:32px;height:32px"><i>›</i><img class="sp ripe" src="__ART:crops/legendary-ripe.png__" alt="" width="32" height="32" style="width:32px;height:32px"><b>__RULE:grow.legendary__ · __RULE:yield.legendary__<img class="sp in" src="__ART:props/candy.png__" alt="" width="16" height="16" style="width:16px;height:16px"></b></div><div class="row secret"><img class="sp" src="__ART:crops/legendary-sprout.png__" alt="" width="32" height="32" style="width:32px;height:32px"><i>›</i><img class="sp" src="__ART:crops/secret-growing.png__" alt="" width="32" height="32" style="width:32px;height:32px"><i>›</i><img class="sp ripe" src="__ART:crops/secret-ripe.png__" alt="" width="32" height="32" style="width:32px;height:32px"><b>1% secret</b></div></div></div>
+    <h3>Grow</h3>
+    <p>Common is free, Rare (ghost-white) costs 5 candy and Legendary (gold) 15; the picture shows how long each takes and what it yields. A Legendary seed has a 1% chance of growing the village's secret pumpkin.</p>
+  </article>
+  <article class="rule" id="rule-tap">
+    <div class="mini" role="img" aria-label="A ripe pumpkin, tapped once: +4 candy."><div class="stage s-tap" style="height:120px"><span class="tl" style="left:108px;top:28px"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:0px;top:0px"><img class="sp" src="__ART:crops/common-ripe.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:0px;top:0px"></span><span class="ring" style="left:108px;top:28px"></span><span class="float" style="left:186px;top:36px">+4<img class="sp in" src="__ART:props/candy.png__" alt="" width="32" height="32" style="width:32px;height:32px"></span></div></div>
+    <h3>One tap</h3>
+    <p>One tap does it: harvest, steal, water, shoo a ghost, clear a rotten pumpkin. Only a guard ghost<span data-rule="expansion"> or a bigger field</span> asks first, because it costs candy.</p>
+  </article>
+  <article class="rule" id="rule-pinch">
+    <div class="mini" role="img" aria-label="A neighbour's ripe pumpkin worth 4 candy; a farmer pinches one, -1 rises and it is worth 3."><div class="stage s-pinch" style="height:120px"><span class="tag" style="left:6px;top:6px"><img class="ico" src="__ART:ui/icon-hourglass.png__" alt="after" width="24" height="24" style="width:24px;height:24px">__RULE:open__</span><img class="sp face" src="__ART:avatars/farmer-4.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:24px;top:44px"><span class="tl" style="left:150px;top:44px"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:0px;top:0px"><img class="sp" src="__ART:crops/common-ripe.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:0px;top:0px"></span><span class="val v4" style="left:146px;top:34px"><img class="sp in" src="__ART:props/candy.png__" alt="" width="16" height="16" style="width:16px;height:16px">4</span><span class="val v3" style="left:146px;top:34px"><img class="sp in" src="__ART:props/candy.png__" alt="" width="16" height="16" style="width:16px;height:16px">3</span><span class="float minus" style="left:204px;top:40px">-1<img class="sp in" src="__ART:props/candy.png__" alt="" width="32" height="32" style="width:32px;height:32px"></span></div></div>
+    <h3>Pinch</h3>
+    <p>A ripe pumpkin left unharvested for __RULE:open:long__ can be stolen from — 1 candy per steal, at most 2 steals per pumpkin, and the owner always keeps at least half. __RULE:steals__ steals a day each.</p>
+  </article>
+  <article class="rule" id="rule-caught">
+    <div class="mini" role="img" aria-label="A ghost follows the farmer home and sits on one of their crops: half speed until shooed for 2 candy."><div class="stage s-caught" style="height:120px"><img class="sp face" src="__ART:avatars/farmer-2.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:10px;top:40px"><span class="tl" style="left:196px;top:34px"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:0px;top:0px"><img class="sp" src="__ART:crops/common-growing.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:0px;top:0px"></span><img class="sp follow" src="__ART:props/ghost.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:196px;top:18px"><span class="tag slow" style="left:120px;top:8px">½ speed</span><span class="shoo" style="left:192px;top:100px">shoo 2<img class="sp in" src="__ART:props/candy.png__" alt="" width="16" height="16" style="width:16px;height:16px"></span></div></div>
+    <h3>Caught</h3>
+    <p>Every steal is a gamble: usually 30% you're caught and a ghost follows you home. It sits on one of your crops and slows it to half speed until you shoo it (2 candy).</p>
+  </article>
+  <article class="rule" id="rule-fight">
+    <div class="mini" role="img" aria-label="For 10 minutes a thief faces a 60% catch chance; a hidden guard ghost pops out of a pumpkin shouting BOO!; never more than 80%."><div class="stage s-fight" style="height:120px"><span class="timer" style="left:6px;top:10px"><img class="ico" src="__ART:ui/icon-hourglass.png__" alt="revenge" width="24" height="24" style="width:24px;height:24px"><b>10:00</b></span><span class="tag risk" style="left:6px;top:54px">60%</span><span class="tag cap" style="left:6px;top:88px">80% max</span><span class="tl" style="left:168px;top:52px"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:0px;top:0px"><img class="sp" src="__ART:crops/common-ripe.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:0px;top:0px"></span><img class="sp pop" src="__ART:props/guard-ghost.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:170px;top:26px"><span class="boo" style="left:198px;top:2px">BOO!</span></div></div>
+    <h3>Fight back</h3>
+    <p>Steal from (or get caught on) someone's farm and for 10 minutes they're watching for you: 60% catch chance there. A guard ghost (5 candy, 6 hours, 2 per farm) makes one of your pumpkins 60% risky to steal — 80% with revenge, never more. Only you can see your guards: a thief finds out when the guarded one jumps out. BOO!</p>
+  </article>
+  <article class="rule" id="rule-rot">
+    <div class="mini" role="img" aria-label="A ripe Common for __RULE:off.common:long__: full value; then going off, half, until __RULE:rot.common:long__; after that rotten, nothing."><div class="stage s-rot" style="height:120px"><span class="tl" style="left:8px;top:4px"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:0px;top:0px"><img class="sp" src="__ART:crops/common-ripe.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:0px;top:0px"></span><span class="cap2" style="left:8px;top:72px"><b>0–__RULE:off.common__</b><span>full <img class="sp in" src="__ART:props/candy.png__" alt="" width="16" height="16" style="width:16px;height:16px">4</span></span><span class="tl" style="left:104px;top:4px"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:0px;top:0px"><img class="sp off" src="__ART:crops/common-ripe.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:0px;top:0px"></span><span class="flies" style="left:122px;top:12px"><i></i><i></i></span><span class="cap2" style="left:104px;top:72px"><b>__RULE:off.common:num__–__RULE:rot.common__</b><span>half <img class="sp in" src="__ART:props/candy.png__" alt="" width="16" height="16" style="width:16px;height:16px">2</span></span><span class="tl" style="left:200px;top:4px"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:0px;top:0px"><img class="sp" src="__ART:crops/rotten.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:0px;top:0px"></span><span class="cap2" style="left:200px;top:72px"><b>__RULE:rot.common__+</b><span>none <img class="sp in" src="__ART:props/candy.png__" alt="" width="16" height="16" style="width:16px;height:16px">0</span></span></div></div>
+    <h3>Rot</h3>
+    <p>A ripe Common or Rare left __RULE:off.common:long__ starts going off (worth half); after __RULE:rot.common:long__ it's rotten, worth nothing, and has to be cleared away. A Legendary (and the secret pumpkin) keeps longer: __RULE:off.legendary:long__ and __RULE:rot.legendary:long__.</p>
+  </article>
+  <article class="rule" id="rule-help">
+    <div class="mini" role="img" aria-label="Watering a neighbour's crop: a drop falls and +1 candy rises."><div class="stage s-help" style="height:120px"><img class="sp can" src="__ART:props/watering-can.png__" alt="" width="48" height="48" style="width:48px;height:48px;left:54px;top:14px"><img class="sp drop" src="__ART:ui/icon-water.png__" alt="" width="24" height="24" style="width:24px;height:24px;left:128px;top:18px"><span class="tl" style="left:112px;top:46px"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:0px;top:0px"><img class="sp" src="__ART:crops/rare-growing.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:0px;top:0px"></span><span class="float plus" style="left:186px;top:46px">+1<img class="sp in" src="__ART:props/candy.png__" alt="" width="32" height="32" style="width:32px;height:32px"></span><span class="tag" style="left:196px;top:92px">__RULE:helps__ a day</span></div></div>
+    <h3>Help</h3>
+    <p>Water a neighbour's crop or chase a ghost off it: it ripens 10% sooner and you get 1 candy. __RULE:helps__ helps a day.</p>
+  </article>
+  <article class="rule" id="rule-village">
+    <div class="mini" role="img" aria-label="A strip of the village map: houses with pumpkin and ghost pips, a farmer's face, and a lot for rent."><div class="stage s-village" style="height:96px"><span class="strip" style="background-image:url(__ART:map/village.png__)"><img class="sp" src="__ART:map/house-2.png__" alt="" width="48" height="48" style="width:48px;height:48px;left:15px;top:15px"><img class="sp face sm" src="__ART:avatars/farmer-3.png__" alt="" width="32" height="32" style="width:32px;height:32px;left:2px;top:4px"><span class="pips" style="left:46px;top:2px"><img class="ico" src="__ART:ui/icon-pumpkin.png__" alt="ripe" width="24" height="24" style="width:24px;height:24px"><img class="ico" src="__ART:ui/icon-ghost.png__" alt="guarded" width="24" height="24" style="width:24px;height:24px"></span><img class="sp" src="__ART:map/house-1.png__" alt="" width="48" height="48" style="width:48px;height:48px;left:114px;top:7px"><span class="pips" style="left:146px;top:0"><img class="ico" src="__ART:ui/icon-warning.png__" alt="stole from you" width="24" height="24" style="width:24px;height:24px"></span><span class="sign" style="left:200px;top:22px">For rent</span></span></div></div>
+    <h3>The village</h3>
+    <p>Every farm is a house on the map — <img class="ico" src="__ART:ui/icon-pumpkin.png__" alt="pumpkin" width="24" height="24" style="width:24px;height:24px"> something to pinch, <img class="ico" src="__ART:ui/icon-ghost.png__" alt="ghost" width="24" height="24" style="width:24px;height:24px"> a guard on duty, <img class="ico" src="__ART:ui/icon-warning.png__" alt="warning" width="24" height="24" style="width:24px;height:24px"> they just stole from you. Tap a house to visit; <img class="ico" src="__ART:ui/icon-map.png__" alt="" width="24" height="24" style="width:24px;height:24px"> Village takes you back. Each district has 8 houses; past 8 farmers, switch districts at the top of the map. Moving out puts your lot back up for rent. "Lately in the village", the bar above the map, lists every steal, catch and help.</p>
+  </article>
+  <article class="rule" id="rule-first">
+    <div class="mini" role="img" aria-label="A tutorial bubble pointing at a sprout: your first crop ripens in 5 minutes."><div class="stage s-first" style="height:120px"><span class="bubble" style="left:8px;top:8px"><b>1/5</b> Tap to plant…</span><span class="tl" style="left:186px;top:40px"><img class="sp" src="__ART:tiles/soil.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:0px;top:0px"><img class="sp" src="__ART:crops/common-sprout.png__" alt="" width="64" height="64" style="width:64px;height:64px;left:0px;top:0px"></span><span class="tag luck" style="left:18px;top:74px"><img class="ico" src="__ART:ui/icon-hourglass.png__" alt="ripe in" width="24" height="24" style="width:24px;height:24px">5 min</span></div></div>
+    <h3>First steps</h3>
+    <p>A short tutorial walks you through planting, the village, stealing, guard ghosts and harvesting — by doing each one. Your very first crop ripens in 5 minutes (beginner's luck, once).</p>
+  </article>
+  <article class="rule" id="rule-sound">
+    <div class="mini" role="img" aria-label="The gear menu: Sound and Music toggles."><div class="stage s-sound" style="height:120px"><img class="sp" src="__ART:ui/icon-gear.png__" alt="" width="48" height="48" style="width:48px;height:48px;left:20px;top:30px"><i class="arr" style="left:80px;top:40px">›</i><span class="setting" style="left:104px;top:16px"><img class="sp" src="__ART:ui/icon-sound-on.png__" alt="" width="24" height="24" style="width:24px;height:24px">Sound <b>on</b></span><span class="setting" style="left:104px;top:62px"><img class="sp" src="__ART:ui/icon-music-off.png__" alt="" width="24" height="24" style="width:24px;height:24px">Music <b class="off">off</b></span></div></div>
+    <h3>Sound</h3>
+    <p>Every action has its own little sound, made in your browser. The <img class="ico" src="__ART:ui/icon-gear.png__" alt="gear" width="24" height="24" style="width:24px;height:24px"> menu at the top right has Sound (on/off for everything) and Music (a quiet night ambience, off until you turn it on). Nothing plays until you first tap.</p>
+  </article>
+</div>
+<p class="replay"><a class="btn" href="/?tutorial=replay" id="replay-tutorial">↺ Replay tutorial</a></p>

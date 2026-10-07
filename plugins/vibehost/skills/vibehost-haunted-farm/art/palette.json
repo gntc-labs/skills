@@ -1,0 +1,22 @@
+{
+  "name": "haunted-farm-16",
+  "note": "Every art file uses only these 16 colours (plus full transparency). Index order is stable: prompts and the placeholder generator refer to colours by name.",
+  "colors": {
+    "void": "#0d0b14",
+    "night": "#1d1730",
+    "dusk": "#3a2a52",
+    "plum": "#6b3d7a",
+    "moss": "#2f4a2c",
+    "leaf": "#5b8a3a",
+    "lime": "#a6c64b",
+    "soil": "#4a2f22",
+    "loam": "#7a4b2e",
+    "pumpkin": "#e8731c",
+    "amber": "#f5a623",
+    "candle": "#ffe08a",
+    "bone": "#f2ead8",
+    "ash": "#9a93a6",
+    "blood": "#a3243b",
+    "spirit": "#7fe3d4"
+  }
+}

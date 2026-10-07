@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "namePattern": "{Theme} Village",
+  "themes": [
+    { "id": "graveyard", "name": "Graveyard", "villageName": "Hollow Graves Village", "flavour": "crooked tombstones, an iron gate, mist between the plots" },
+    { "id": "witch-forest", "name": "Witch Forest", "villageName": "Cauldron Hollow", "flavour": "twisted purple trees, glowing mushrooms, a bubbling cauldron" },
+    { "id": "haunted-school", "name": "Haunted School", "villageName": "Old Bell Schoolyard", "flavour": "a dark schoolhouse, one lit window, swings that move by themselves" }
+  ],
+  "weathers": [
+    { "id": "fog", "name": "Fog Week", "flavour": "thick fog rolls between the farms" },
+    { "id": "blood-moon", "name": "Blood Moon", "flavour": "a red moon hangs over the village all week" },
+    { "id": "thunder", "name": "Thunder Week", "flavour": "lightning flickers over the scarecrows" },
+    { "id": "harvest-moon", "name": "Harvest Moon", "flavour": "a huge golden moon lights every pumpkin" },
+    { "id": "first-frost", "name": "First Frost", "flavour": "frost sparkles on the vines at dawn" },
+    { "id": "bat-swarm", "name": "Bat Swarm", "flavour": "bats circle the bell tower every dusk" }
+  ],
+  "secrets": [
+    { "id": "moonglass", "name": "Moonglass Gourd" },
+    { "id": "wailing-jack", "name": "Wailing Jack" },
+    { "id": "spectre-squash", "name": "Spectre Squash" },
+    { "id": "nightmare-marrow", "name": "Nightmare Marrow" },
+    { "id": "lantern-king", "name": "Lantern King" },
+    { "id": "witchs-heart", "name": "Witch's Heart" }
+  ],
+  "limits": { "name": 40, "tagline": 80 }
+}

@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<!--HEAD-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jersey+10&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #0d0b14; --night: #1d1730; --dusk: #3a2a52; --plum: #6b3d7a;
+    --moss: #2f4a2c; --leaf: #5b8a3a; --lime: #a6c64b; --soil: #4a2f22; --loam: #7a4b2e;
+    --pumpkin: #e8731c; --amber: #f5a623; --candle: #ffe08a; --bone: #f2ead8;
+    --ash: #9a93a6; --blood: #a3243b; --spirit: #7fe3d4;
+    --px: 3; --tile: calc(32px * var(--px));
+    /* Fonts: Jersey 10 for what you glance at — headings,
+       buttons, big numbers, HUD chips, name tags, BOO! — about 1.3× the old
+       pixel font's sizes (its glyphs are narrow); Space Mono for what you read. */
+    --display: "Jersey 10", ui-monospace, monospace;
+    --body: "Space Mono", ui-monospace, monospace;
+  }
+  /* Jersey 10 has one weight: never a faux bold. */
+  html { font-synthesis: style; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 400; }
+  @media (max-width: 420px) { :root { --px: 2.6; } }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    position: relative; min-height: 100vh; color: var(--bone); background: var(--void);
+    font: 16px/1.4 var(--body);
+  }
+  /* The theme scene sits behind the first screen and fades into the night
+     below it. Not background-attachment: fixed — mobile Safari ignores it and
+     scales a cover image to the whole (tall) page. */
+  .scene { position: absolute; top: 0; left: 0; right: 0; height: max(100vh, 560px); z-index: 0; pointer-events: none;
+    background: linear-gradient(rgba(13,11,20,.2), rgba(13,11,20,.4)), var(--bg) center top / cover no-repeat;
+    -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
+  .scene::after { content: ""; position: absolute; inset: 0; }
+  /* ui/frame.png as a 9-slice at 2×: the pumpkin corner studs reach 15 px
+     and the wood band ends by 14 px (native), so a 16 px slice keeps every
+     stud whole and starts the dusk centre cleanly. The outside of the frame
+     is transparent. */
+  .panel { border: 32px solid transparent; border-image: var(--frame) 16 fill / 32px / 0 round; image-rendering: pixelated; }
+  img { image-rendering: pixelated; }
+  body[data-weather="fog"] .scene::after { background: linear-gradient(180deg, transparent 40%, rgba(154,147,166,.28)); }
+  body[data-weather="blood-moon"] .scene::after { background: radial-gradient(circle at 85% 10%, rgba(163,36,59,.55) 0 40px, transparent 41px), linear-gradient(rgba(163,36,59,.12), transparent); }
+  body[data-weather="thunder"] .scene::after { background: linear-gradient(rgba(127,227,212,.08), transparent 30%); animation: flash 9s steps(1) infinite; }
+  body[data-weather="harvest-moon"] .scene::after { background: radial-gradient(circle at 85% 10%, rgba(245,166,35,.6) 0 46px, transparent 47px); }
+  body[data-weather="first-frost"] .scene::after { background: linear-gradient(0deg, rgba(242,234,216,.12), transparent 30%); }
+  body[data-weather="bat-swarm"] .scene::after { background: radial-gradient(circle at 20% 15%, rgba(13,11,20,.8) 0 3px, transparent 4px) 0 0 / 120px 90px; }
+  @keyframes flash { 0%, 96% { opacity: 1; } 97% { opacity: .2; } }
+  .wrap { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 16px; }
+  .top { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
+  .top .sub { color: var(--bone); opacity: .85; }
+  .titlerow { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .titles { min-width: 0; }
+  #top-village:empty { display: none; }
+  #top-village { display: none; }
+  .chip .short { display: none; }
+  /* HUD chips: words, not bare N/M; each one has a tip. */
+  #hud .chip { display: inline-flex; align-items: center; gap: 4px; font: 21px/1.2 var(--display); color: inherit; background: none; border: 0; border-bottom: 1px dotted rgba(242,234,216,.45); padding: 0 1px; cursor: help; white-space: nowrap; }
+  #hud .chip.hudbtn { cursor: pointer; border: 2px solid var(--plum); background: var(--dusk); padding: 2px 8px; }
+  #hud .chip.out { opacity: .5; }
+  #hud .chip:focus-visible { outline: 2px solid var(--candle); outline-offset: 2px; }
+  #hud:empty { display: none; }
+  /* First-run tutorial: a spotlight that doesn't block the tap, and a bubble. */
+  #coach-spot { position: fixed; z-index: 25; border: 3px solid var(--candle); border-radius: 10px; box-shadow: 0 0 0 9999px rgba(13,11,20,.55), 0 0 18px rgba(255,224,138,.7); pointer-events: none; animation: coach-pulse 1.4s ease-in-out infinite; }
+  @keyframes coach-pulse { 50% { box-shadow: 0 0 0 9999px rgba(13,11,20,.55), 0 0 4px rgba(255,224,138,.3); } }
+  #coach-bubble { position: fixed; z-index: 26; padding: 10px 12px; font-size: 15px; line-height: 1.35; color: var(--void); background: var(--bone); border: 3px solid var(--void); box-shadow: 4px 4px 0 var(--void); animation: coach-in .25s ease-out; }
+  @keyframes coach-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  #coach-bubble p { margin: 0; }
+  #coach-count { display: inline-block; padding: 0 5px; font: 17px/1.2 var(--display); color: var(--bone); background: var(--plum); }
+  .coach-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 8px !important; }
+  #coach-ok { margin: 0; }
+  #coach-ok[hidden] { display: none; }
+  #coach-skip { font: inherit; font-size: 13px; color: var(--void); background: none; border: 0; text-decoration: underline; cursor: pointer; padding: 4px; }
+  @media (prefers-reduced-motion: reduce) { #coach-spot, #coach-bubble { animation: none; } }
+  #rules .replay { margin: 12px 0 0; }
+  #hud-tip { position: absolute; z-index: 30; padding: 8px 10px; font-size: 13px; line-height: 1.35; color: var(--bone); background: var(--night); border: 2px solid var(--candle); box-shadow: 3px 3px 0 var(--void); pointer-events: none; }
+  h1 { margin: 0; font-size: 44px; line-height: 1.1; color: var(--candle); text-shadow: 3px 3px 0 var(--void); }
+  .sub { margin: 2px 0 0; color: var(--ash); }
+  #hud { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 8px 12px; background: rgba(13,11,20,.82); border: 3px solid var(--dusk); }
+  .banner { margin: 14px 0 0; padding: 10px 14px; background: rgba(29,23,48,.92); border: 3px solid var(--plum); }
+  .btn, dialog button { font: 23px/1.2 var(--display); cursor: pointer; color: var(--void); background: var(--amber); border: 3px solid var(--void); padding: 4px 12px; margin-left: 6px; box-shadow: 3px 3px 0 var(--void); text-decoration: none; display: inline-block; }
+  .btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--void); }
+  #farms { display: flex; flex-wrap: wrap; gap: 22px; justify-content: center; margin-top: 18px; }
+  .farm { position: relative; background: rgba(13,11,20,.78); border: 3px solid var(--dusk); padding: 8px 8px 10px; }
+  .farm.me { border-color: var(--amber); }
+  .farm header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; min-height: 36px; }
+  .farm header b { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: calc(var(--tile) * 2); }
+  .avatar { width: 36px; height: 36px; }
+  .you { font: 18px/1.2 var(--display); padding: 0 6px; background: var(--plum); }
+  .who { font-size: 13px; color: var(--ash); }
+  .farm header b { font: 23px/1.1 var(--display); }
+  .farm header .candy { font: 21px/1 var(--display); }
+  /* A farm's name is how neighbours know it: wrap, don't cut it off. */
+  .farm header b { white-space: normal; overflow-wrap: anywhere; max-width: none; }
+  .candy .ico { margin-right: 3px; }
+  /* A 2 px moss gutter between tiles: the soil tile is seamless, so without
+     it nine empty tiles read as one field and you can't see where to tap. */
+  /* 3×3, or bigger once bought: up to 4×4. */
+  .grid { display: grid; grid-template-columns: repeat(var(--cols, 3), var(--tile)); grid-template-rows: repeat(var(--rows, 3), var(--tile)); gap: 2px; padding: 2px; background: var(--moss); }
+  .tile { position: relative; width: var(--tile); height: var(--tile); padding: 0; border: 0; background: none; color: inherit; font: inherit; }
+  .tile img { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .tile .ghost { width: 70%; height: 70%; inset: auto 0 auto auto; top: 0; animation: bob 2s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-6px); } }
+  .tile .note { position: absolute; left: 2px; bottom: 2px; font: 18px/1.2 var(--display); padding: 0 4px; background: rgba(13,11,20,.8); }
+  button.tile { cursor: pointer; }
+  button.tile::after { content: ""; position: absolute; inset: 3px; border: 3px solid transparent; }
+  button.tile:hover::after, button.tile:focus-visible::after { border-color: var(--candle); }
+  button.act-steal::after { border-color: var(--blood); }
+  button.act-harvest::after { border-color: var(--lime); }
+  /* The scarecrow stands beside the field, never on a tile. */
+  .plot { display: flex; align-items: flex-end; gap: 4px; }
+  .scarecrow { flex: none; width: 48px; height: 72px; }
+  /* Scarecrow colour (farm setup): the sprite re-tinted, no extra art. */
+  .sc-plum { filter: hue-rotate(250deg) saturate(1.2); }
+  .sc-moss { filter: hue-rotate(80deg); }
+  .sc-bone { filter: grayscale(1) brightness(1.5); }
+  .sc-blood { filter: hue-rotate(-25deg) saturate(1.6) brightness(.85); }
+  .sc-spirit { filter: hue-rotate(150deg) saturate(1.3) brightness(1.15); }
+  body[data-busy] button.tile { cursor: progress; }
+  /* ── "Lately in the village": a bar ABOVE the map ── */
+  .village-map { width: 100%; }
+  .map-stage { position: relative; }
+  .feed-drop ul, #feed-sheet ul { list-style: none; margin: 0; padding: 0; }
+  .ev { display: flex; align-items: center; gap: 6px; padding: 3px 6px; font-size: 13px; line-height: 1.25; color: var(--bone); border-left: 3px solid transparent; }
+  .ev.me { border-left-color: var(--amber); background: rgba(245,166,35,.12); }
+  .ev .face { flex: none; width: 24px; height: 24px; background: var(--dusk); border: 1px solid var(--void); }
+  .ev .txt { flex: 1; min-width: 0; }
+  .ev .when { flex: none; color: var(--ash); white-space: nowrap; }
+  .ev.empty { color: var(--ash); font-style: italic; }
+  .ev b { color: var(--candle); }
+  @keyframes slide-in { from { transform: translateY(100%); opacity: 0; } to { transform: none; opacity: 1; } }
+  .slide { animation: slide-in .35s ease-out; }
+  /* The feed bar: one full-width button above the map / the 3×3. */
+  .feed-bar-wrap { position: relative; z-index: 5; flex: 1 0 100%; width: 100%; margin-bottom: 6px; }
+  .feed-bar { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; padding: 6px 8px; font: inherit; font-size: 14px; text-align: left; color: var(--bone); background: rgba(13,11,20,.88); border: 3px solid var(--dusk); box-shadow: 3px 3px 0 var(--void); cursor: pointer; }
+  .feed-bar:hover { border-color: var(--plum); background: rgba(29,23,48,.95); }
+  .feed-bar:active, .feed-bar[aria-expanded="true"] { transform: translate(1px, 1px); box-shadow: 2px 2px 0 var(--void); border-color: var(--amber); }
+  .feed-bar:focus-visible { outline: 2px solid var(--candle); outline-offset: 2px; }
+  .feed-bar .face { flex: none; width: 26px; height: 26px; background: var(--dusk); border: 1px solid var(--void); }
+  .feed-bar .txt { display: block; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .feed-bar .when { color: var(--ash); }
+  .feed-bar b { color: var(--candle); }
+  .feed-bar .all { flex: none; padding: 2px 8px; font: 18px/1.2 var(--display); white-space: nowrap; color: var(--void); background: var(--bone); border: 2px solid var(--void); }
+  .feed-bar .badge { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; color: var(--void); background: var(--amber); border: 2px solid var(--void); }
+  .feed-drop { position: absolute; top: calc(100% + 2px); left: 0; right: 0; max-height: calc(var(--map-room, 540px) * .6); overflow-y: auto; background: rgba(13,11,20,.94); border: 3px solid var(--amber); box-shadow: 4px 4px 0 var(--void); }
+  @media (max-width: 899px) {
+    body[data-page="farm"] #farms { gap: 10px; margin-top: 8px; }
+    .feed-bar { font-size: 13px; gap: 6px; padding: 4px 6px; }
+    .feed-bar .all { font-size: 17px; padding: 1px 5px; }
+  }
+  #feed-sheet { position: fixed; inset: auto 0 0 0; width: 100%; max-width: 640px; max-height: 70vh; margin: 0 auto; padding: 8px 12px 16px; overflow-y: auto; color: var(--bone); background: var(--night); border: 3px solid var(--dusk); border-bottom: 0; }
+  #feed-sheet::backdrop { background: rgba(13,11,20,.6); }
+  #feed-sheet .grip { width: 48px; height: 5px; margin: 0 auto 8px; background: var(--ash); }
+  #feed-sheet header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  #feed-sheet h2 { margin: 0; font-size: 26px; color: var(--candle); }
+  #feed-sheet .ev { font-size: 15px; padding: 6px; }
+  #toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 5; width: max-content; max-width: calc(100% - 32px); padding: 10px 16px; background: var(--night); border: 3px solid var(--amber); box-shadow: 4px 4px 0 var(--void); }
+  dialog { color: var(--bone); background: var(--night); border: 3px solid var(--amber); padding: 14px; max-width: calc(100% - 32px); }
+  dialog::backdrop { background: rgba(13,11,20,.7); }
+  dialog h2 { margin: 0 0 10px; font-size: 30px; color: var(--candle); }
+  .choices { display: grid; gap: 8px; }
+  .choices button { display: grid; grid-template-columns: 48px 1fr; grid-template-rows: auto auto auto; text-align: left; margin: 0; }
+  .choices button img { grid-row: 1 / 4; width: 48px; height: 48px; }
+  .choices button:disabled { opacity: .45; cursor: not-allowed; }
+  footer { position: relative; z-index: 1; text-align: center; padding: 20px 16px 40px; color: var(--ash); font-size: 14px; }
+  footer a { color: var(--candle); }
+  /* ── pulling, risk, haunting ── */
+  button.tile[data-pull] { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+  .tile .crop { transform-origin: 50% 92%; }
+  button.tile.pulling::before { content: ""; position: absolute; left: 4px; bottom: 4px; height: 4px; width: calc((100% - 8px) * var(--p, 0)); background: var(--candle); z-index: 2; }
+  button.tile.sneaky::before { background: var(--spirit); }
+  .tile .risk { position: absolute; right: 2px; bottom: 2px; z-index: 2; font: 16px/1.2 var(--display); padding: 0 3px; color: var(--bone); background: rgba(107,61,122,.92); }
+  .tile .risk.raised { background: var(--blood); }
+  /* What a neighbour's ripe pumpkin is worth right now (rot halves it). */
+  .tile .value { position: absolute; left: 2px; top: 2px; z-index: 2; font: 17px/1.2 var(--display); padding: 0 4px; color: var(--void); background: var(--candle); border: 2px solid var(--void); }
+  .tile .guard { position: absolute; inset: auto auto 2% -4%; width: 55%; height: 55%; z-index: 1; image-rendering: pixelated; }
+  /* Going off (half value, until it rots): darker, with a couple of flies. */
+  .tile .crop.off { filter: brightness(.62) saturate(.55) sepia(.35); }
+  .tile .flies { position: absolute; left: 30%; top: 18%; width: 40%; height: 30%; z-index: 1; pointer-events: none; }
+  .tile .flies i { position: absolute; width: 3px; height: 3px; background: var(--void); box-shadow: 0 0 0 1px rgba(242,234,216,.35); animation: fly 1.6s linear infinite; }
+  .tile .flies i + i { animation-duration: 2.1s; animation-direction: reverse; left: 60%; }
+  @keyframes fly { 0% { transform: translate(0, 0); } 25% { transform: translate(14px, -6px); } 50% { transform: translate(6px, 8px); } 75% { transform: translate(-6px, -4px); } 100% { transform: translate(0, 0); } }
+  .tile .shoo { position: absolute; left: 2px; bottom: 2px; z-index: 1; font: 16px/1.2 var(--display); white-space: nowrap; padding: 0 4px; color: var(--void); background: var(--spirit); }
+  .tile.haunted-mine { animation: haunted 1.2s ease-in-out infinite; }
+  @keyframes haunted { 50% { box-shadow: inset 0 0 0 3px var(--spirit), 0 0 14px 2px rgba(127,227,212,.55); } }
+  #risk-hint { position: fixed; z-index: 15; transform: translate(-50%, calc(-100% - 8px)); padding: 6px 10px; font-size: 14px; white-space: nowrap; text-align: center; color: var(--bone); background: var(--plum); border: 3px solid var(--void); box-shadow: 3px 3px 0 var(--void); pointer-events: none; }
+  #risk-hint.raised { background: var(--blood); }
+  #risk-hint small { display: block; font-size: 12px; color: var(--candle); }
+  /* The one confirm: spending 5 candy on a guard ghost. */
+  #guard-chip, #expand-chip { position: fixed; z-index: 16; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; font: 20px/1.2 var(--display); white-space: nowrap; color: var(--void); background: var(--spirit); border: 3px solid var(--void); box-shadow: 3px 3px 0 var(--void); }
+  #guard-chip button, #expand-chip button { font: inherit; cursor: pointer; min-width: 34px; min-height: 34px; border: 2px solid var(--void); }
+  #guard-chip .yes, #expand-chip .yes { background: var(--lime); }
+  #guard-chip .no, #expand-chip .no { background: var(--bone); }
+  /* Wide enough for the rules' two columns of illustrated cards. */
+  dialog#rules { width: min(920px, calc(100% - 32px)); max-height: calc(100% - 48px); }
+  #rules-close { float: right; margin: 0 0 6px 8px; }
+  .hudbtn { font: 20px/1.2 var(--display); cursor: pointer; color: var(--bone); background: var(--dusk); border: 2px solid var(--plum); padding: 2px 8px; }
+  .hudbtn .ico { margin-right: 4px; }
+  .hudbtn.on { color: var(--void); background: var(--spirit); }
+  .btn.back { display: inline-block; margin: 14px 0 0; font-size: 26px; }
+  body[data-view="neighbour"] #farms { flex-direction: column; align-items: center; }
+  /* Settings: one pixel gear, top-right of the header (44 px to
+     tap, 32 px of layout), opening a small framed menu. Phone: the last item
+     of the title row; wider: pinned to the panel's top-right corner. */
+  .top { position: relative; }
+  #settings { position: relative; flex: none; z-index: 40; }
+  #gear { display: grid; place-items: center; width: 44px; height: 44px; margin: -6px -6px -6px 0; padding: 0; cursor: pointer; background: none; border: 0; }
+  #gear .ico { padding: 2px; background: rgba(13,11,20,.6); border: 2px solid var(--dusk); box-sizing: content-box; }
+  #gear:hover .ico, #gear[aria-expanded="true"] .ico { border-color: var(--candle); }
+  #gear:focus-visible { outline: 2px solid var(--candle); outline-offset: -2px; }
+  #settings-menu { position: absolute; right: -6px; top: calc(100% + 2px); width: 230px; display: flex; flex-direction: column; gap: 2px; border: 12px solid transparent; border-image: var(--frame) 16 fill / 12px / 0 round; image-rendering: pixelated; filter: drop-shadow(4px 4px 0 var(--void)); }
+  #settings-menu[hidden] { display: none; }
+  #settings-menu button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; margin: 0; padding: 4px 8px; font: 21px/1.2 var(--display); text-align: left; color: var(--bone); background: none; border: 2px solid transparent; box-shadow: none; cursor: pointer; }
+  #settings-menu button[hidden] { display: none; }
+  #settings-menu button:hover, #settings-menu button:focus-visible { outline: none; border-color: var(--candle); background: rgba(13,11,20,.45); }
+  #settings-menu .gap { flex: none; width: 24px; }
+  #settings-menu .state { margin-left: auto; padding: 0 6px; font-size: 17px; font-weight: 400; color: var(--void); background: var(--ash); }
+  #settings-menu [aria-checked="true"] .state { background: var(--lime); }
+  @media (min-width: 600px) {
+    #settings { position: absolute; top: -4px; right: -4px; }
+    .titlerow { padding-right: 44px; }
+  }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  /* ── effects layer (fx.js) ── */
+  #fx { position: fixed; inset: 0; z-index: 20; pointer-events: none; overflow: hidden; }
+  .fx-sprite { position: fixed; image-rendering: pixelated; }
+  /* BOO! — the comic bubble a hidden guard ghost bursts out with. */
+  .fx-boo { position: fixed; z-index: 16; transform: translate(-50%, -50%) rotate(-3deg); padding: 4px 14px 6px; font: 52px/1 var(--display); letter-spacing: 2px; color: var(--void); background: var(--bone); border: 4px solid var(--void); border-radius: 18px; box-shadow: 4px 4px 0 var(--void); pointer-events: none; white-space: nowrap; }
+  .fx-boo::after { content: ""; position: absolute; left: 14px; bottom: -14px; border: 7px solid transparent; border-top-color: var(--void); border-left-color: var(--void); }
+  /* A neighbour's guard ghosts: a count, never a tile. */
+  .farm .lurking { margin: 0 0 6px; padding: 6px 10px; font-size: 14px; color: var(--bone); background: rgba(13,11,20,.75); border: 2px dashed var(--plum); }
+  .fx-clod { position: fixed; }
+  .fx-candy { position: fixed; width: 24px; height: 24px; image-rendering: pixelated; }
+  .fx-float { position: fixed; transform: translateX(-50%); font: 34px/1.1 var(--display); color: var(--candle); text-shadow: 2px 2px 0 var(--void), -1px -1px 0 var(--void); white-space: nowrap; }
+  /* The robbed pumpkin's loss: bigger, bone on a blood outline, readable on a phone. */
+  .fx-victim { font-size: 44px; color: var(--bone); text-shadow: 3px 0 0 var(--blood), -3px 0 0 var(--blood), 0 3px 0 var(--blood), 0 -3px 0 var(--blood), 3px 3px 0 var(--void); }
+  .fx-gain { transform: translate(-50%, -50%); font-size: 29px; }
+  /* ── the village map ── */
+  .map-wrap { width: 100%; margin-top: 4px; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; border: 3px solid var(--dusk); background: var(--night); }
+  /* One segment per 8 lots, 640–960 px wide: a phone scrolls/pans it, a desktop sees it whole. */
+  .map { display: flex; margin: 0 auto; width: calc(clamp(640px, 100%, 960px) * var(--segs)); }
+  .house .short, .hit, .neighbours { display: none; }
+  .village-map { display: flex; flex-direction: column; }
+  /* The map is the first screen: never taller than the room left under the header. */
+  @media (min-width: 900px) {
+    /* The stage hugs the map, so the feed panel sits ON its corner. */
+    .map-stage { width: min(100%, 966px, calc(var(--map-room, 540px) * 480 / 270 + 6px)); margin: 0 auto; }
+    .map { width: 100%; }
+  }
+  .map-seg { position: relative; flex: none; width: calc(100% / var(--segs)); aspect-ratio: 480 / 270; background-size: 100% 100%; image-rendering: pixelated; }
+  /* 12% of the map: a house plus its label fits between two rows of lots. */
+  .house, .lot { position: absolute; width: 12%; text-decoration: none; }
+  /* A flex column, not a grid: in a grid the image's 100% resolves against
+     a column sized by the (wider) label, and the house balloons. */
+  .house { transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; color: var(--bone); z-index: 1; }
+  .house-img { width: 100%; image-rendering: pixelated; filter: drop-shadow(0 3px 0 rgba(13,11,20,.7)); }
+  .house .face { position: absolute; top: 0; left: -14%; width: 40%; image-rendering: pixelated; background: var(--dusk); border: 2px solid var(--void); }
+  .house .pips { position: absolute; top: 0; right: -16%; display: flex; gap: 1px; padding: 0 3px; font-size: 15px; background: rgba(13,11,20,.85); border: 2px solid var(--void); }
+  .house .pip, .nrow .pip { display: flex; }
+  /* A long farm name truncates; the "You" badge never does. */
+  .house .label { display: flex; align-items: center; gap: 5px; margin-top: -6%; max-width: 190%; padding: 1px 6px; font: clamp(14px, 2.1vw, 20px)/1.15 var(--display); background: rgba(13,11,20,.88); border: 2px solid var(--dusk); }
+  .house .label b { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .house .you { flex: none; font-style: normal; padding: 0 4px; color: var(--void); background: var(--amber); }
+  .house.mine { z-index: 2; }
+  .house.mine .label { border-color: var(--amber); }
+  /* A crisp candle outline, not a soft glow (which blurs pixel art). */
+  .house.mine .house-img { filter: drop-shadow(1px 0 0 var(--candle)) drop-shadow(-1px 0 0 var(--candle)) drop-shadow(0 1px 0 var(--candle)) drop-shadow(0 -1px 0 var(--candle)) drop-shadow(0 3px 0 rgba(13,11,20,.7)); }
+  .house:hover .label, .house:focus-visible .label { border-color: var(--candle); }
+  .house.pop-in { animation: pop-in .7s cubic-bezier(.2,1.5,.4,1) both; }
+  @keyframes pop-in { 0% { transform: translate(-50%, -50%) scale(0); opacity: 0; } 70% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1); } }
+  .lot { transform: translate(-50%, -50%); display: grid; place-items: center; }
+  .lot .sign { font: 14px/1.15 var(--display); text-align: center; padding: 3px 5px; color: var(--void); background: var(--bone); border: 2px solid var(--loam); box-shadow: 2px 2px 0 var(--void); }
+  a.lot:hover .sign, a.lot:focus-visible .sign { background: var(--candle); }
+  .lot .sign small { display: block; font-size: 14px; margin-top: 2px; opacity: 0.8; }
+  /* District switcher: only when the village has more than one. */
+  .districts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 6px; color: var(--bone); font-size: 13px; }
+  .districts .district { font: 18px/1.2 var(--display); color: var(--bone); background: var(--night); border: 2px solid var(--dusk); padding: 4px 10px; min-height: 36px; cursor: pointer; }
+  .districts .district.on { color: var(--void); background: var(--candle); border-color: var(--candle); }
+  .btn.to-village { margin: 0; }
+  body[data-view="neighbour"] .btn.to-village, body[data-view="missing"] .btn.to-village { margin: 14px 0 0; font-size: 26px; }
+  /* ── setup ── */
+  .setup { width: min(560px, 100%); padding: 14px 16px; background: rgba(29,23,48,.95); border: 3px solid var(--amber); }
+  .setup h2 { margin: 0 0 6px; font-size: 30px; color: var(--candle); }
+  .setup label { display: block; margin: 10px 0 0; }
+  .setup input[type="text"], .setup input:not([type]) { font: inherit; width: 100%; padding: 4px 8px; color: var(--bone); background: var(--void); border: 2px solid var(--plum); }
+  .setup .slugrow { display: flex; align-items: center; gap: 4px; color: var(--ash); }
+  .setup fieldset { margin: 12px 0 0; border: 2px solid var(--dusk); display: flex; flex-wrap: wrap; gap: 6px; }
+  .setup .pick { margin: 0; display: grid; justify-items: center; font-size: 12px; cursor: pointer; }
+  .setup .pick input { position: absolute; opacity: 0; }
+  .setup .pick img { width: 48px; height: 48px; padding: 2px; border: 2px solid transparent; image-rendering: pixelated; }
+  .setup .pick input:checked + img { border-color: var(--candle); background: rgba(255,224,138,.15); }
+  .setup .pick input:focus-visible + img { outline: 2px solid var(--spirit); }
+  .setup .err { color: #ff8a8a; min-height: 1.2em; }
+  .fx-flash { position: fixed; inset: 0; }
+  .shake { animation: shake 300ms steps(6) 1; }
+  @keyframes shake { 0%, 100% { transform: none; } 20% { transform: translate(-8px, 3px); } 40% { transform: translate(7px, -4px); } 60% { transform: translate(-6px, -2px); } 80% { transform: translate(5px, 4px); } }
+  /* ── Trick card + away card ── */
+  .move-out-row { margin: 18px 0 0; text-align: center; }
+  #move-out { font: inherit; font-size: 14px; color: var(--ash); background: none; border: 0; text-decoration: underline; cursor: pointer; }
+  dialog#move-out-dlg { width: min(460px, calc(100% - 32px)); text-align: center; }
+  dialog#replace-dlg { width: min(460px, calc(100% - 32px)); text-align: center; }
+  dialog#replace-dlg .row { display: flex; gap: 10px; justify-content: center; }
+  dialog#move-out-dlg .row { display: flex; gap: 10px; justify-content: center; }
+  dialog#trick.trap .trick-word { color: var(--candle); }
+  dialog#trick { width: min(560px, calc(100% - 32px)); text-align: center; border-color: var(--blood); box-shadow: 0 0 0 4px var(--void), 0 0 40px rgba(163,36,59,.6); padding: 18px 20px 22px; }
+  dialog#trick::backdrop { background: rgba(13,11,20,.82); }
+  #trick-ghost { width: 144px; height: 144px; image-rendering: pixelated; animation: bob 2s ease-in-out infinite; }
+  dialog#trick h2 { margin: 6px 0 10px; font-size: 31px; color: var(--bone); }
+  .trick-word { display: block; font-size: 68px; line-height: 1; color: var(--blood); text-shadow: 3px 3px 0 var(--void), 0 0 12px rgba(163,36,59,.8); }
+  dialog#trick p { margin: 0 0 10px; }
+  #trick-count { color: var(--ash); font-size: 15px; }
+  #trick-go { margin: 6px 0 0; font-size: 26px; }
+  /* "While you were away": a small card, one event at a time, no
+     backdrop — the game stays tappable around it. Phone: bottom, full width
+     minus 16 px; desktop: bottom-right, ~340 px. */
+  #away { position: fixed; z-index: 24; left: 8px; right: 8px; bottom: calc(8px + var(--tryout-h, 0px)); max-height: 30vh; display: flex; flex-direction: column; gap: 4px; padding: 6px 10px 6px; color: var(--bone); background: rgba(29,23,48,.97); border: 3px solid var(--amber); box-shadow: 4px 4px 0 var(--void); touch-action: none; user-select: none; overflow: hidden; }
+  #away[hidden] { display: none; }
+  @media (min-width: 900px) { #away { left: auto; right: 16px; bottom: calc(16px + var(--tryout-h, 0px)); width: 340px; } }
+  #away .away-head, #away .away-foot { display: flex; align-items: center; gap: 8px; }
+  #away .away-head b { flex: 1; font: 18px/1.2 var(--display); color: var(--candle); }
+  #away-count { font: 17px/1.2 var(--display); color: var(--ash); }
+  #away button { min-width: 32px; min-height: 32px; font: inherit; font-size: 18px; line-height: 1; color: var(--bone); background: var(--dusk); border: 2px solid var(--void); cursor: pointer; }
+  #away button:disabled { opacity: .35; cursor: default; }
+  #away-slide { display: flex; align-items: center; gap: 8px; min-height: 40px; cursor: grab; }
+  #away-slide .face { flex: none; width: 32px; height: 32px; background: var(--dusk); border: 1px solid var(--void); }
+  /* One line where it fits; a long summary may take a second line, never more. */
+  #away-slide .txt { flex: 1; min-width: 0; font-size: 14px; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  #away-slide[data-summary="1"] .txt { color: var(--candle); }
+  #away-slide .when { flex: none; font-size: 12px; color: var(--ash); }
+  #away .away-foot { justify-content: space-between; }
+  #away-dots { display: flex; gap: 5px; }
+  #away-dots i { width: 7px; height: 7px; background: var(--dusk); border: 1px solid var(--ash); }
+  #away-dots i.on { background: var(--candle); border-color: var(--candle); }
+  @keyframes away-from-right { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes away-from-left { from { transform: translateX(-40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes away-fade { from { opacity: 0; } to { opacity: 1; } }
+  #away-slide.from-right { animation: away-from-right .22s ease-out; }
+  #away-slide.from-left { animation: away-from-left .22s ease-out; }
+  #away-slide.fade { animation: away-fade .25s ease-out; }
+  /* Compact phone header: title on one line, tagline only on the map (one
+     line), the HUD one row of icon+number chips, the Village button in the title row
+     — so a farm's grid starts within the first 300 px. */
+  @media (max-width: 599px) {
+    .wrap { padding: 8px; }
+    .top.panel { border-width: 12px; border-image: var(--frame) 16 fill / 12px / 0 round; gap: 4px; flex-wrap: nowrap; flex-direction: column; align-items: stretch; }
+    .titlerow { justify-content: space-between; }
+    h1 { font-size: 31px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .top .sub { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    body[data-page="farm"] .top .sub { display: none; }
+    #top-village { display: block; flex: none; }
+    #top-village .btn { margin: 0; padding: 2px 8px; font-size: 21px; }
+    #hud .to-village, #farms > .to-village { display: none; }
+    #hud { flex-wrap: nowrap; gap: 4px 7px; padding: 4px 5px; font-size: 13px; overflow-x: auto; white-space: nowrap; align-items: center; }
+    #hud .long { display: none; }
+    #hud .chip .short { display: inline; }
+    #hud .chip { font-size: 17px; }
+    #hud .chip.hudbtn { padding: 0 3px; border-width: 1px; }
+    #hud { gap: 4px 6px; }
+    #hud .hudbtn { font-size: 17px; padding: 0 4px; border-width: 1px; }
+    #hud .hudbtn img { margin-right: 1px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .slide { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .tile .ghost, .scene::after, .tile.haunted-mine, #trick-ghost, .tile .flies i, .house.pop-in { animation: none; }
+    .tile.haunted-mine { box-shadow: inset 0 0 0 3px var(--spirit); } }
+  /* Phone: the map fits the width — no panning, ever. Houses
+     become a face + first name with a ≥ 44 px hit area; "For rent" is a
+     sign icon; the district's farms are listed under the map. */
+  @media (max-width: 899px) {
+    .map-wrap { overflow: hidden; }
+    .map { width: 100%; }
+    .house { width: 46px; justify-content: flex-start; transform: translate(-50%, calc(-50% + 8px)); }
+    .house-img, .house .label { display: none; }
+    .house .face { position: static; width: 32px; height: 32px; border-width: 2px; }
+    .house.mine .face { border-color: var(--amber); box-shadow: 0 0 0 1px var(--candle); }
+    .house .short { display: block; max-width: 72px; margin-top: 1px; padding: 0 3px; font: 14px/1.15 var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgba(13,11,20,.88); border: 1px solid var(--dusk); }
+    .house.mine .short { color: var(--void); background: var(--amber); }
+    /* Pips sit to the right of the face (24 px sprites need the room). */
+    .house .pips { top: 2px; left: calc(50% + 17px); right: auto; padding: 0; border-width: 1px; }
+    .hit { display: block; position: absolute; left: 50%; top: 16px; width: 48px; height: 48px; transform: translate(-50%, -50%); }
+    .lot { width: 44px; height: 44px; }
+    .lot .sign { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); padding: 0; border: 0; }
+    .lot::before { content: "+"; display: grid; place-items: center; width: 30px; height: 30px; font: 28px/1 var(--display); color: var(--loam); background: rgba(242,234,216,.85); border: 2px solid var(--loam); box-shadow: 2px 2px 0 var(--void); }
+    .lot .hit { top: 50%; }
+    .village-map .districts { order: 2; margin: 10px 0 4px; }
+    .neighbours { order: 3; display: block; list-style: none; margin: 8px 0 0; padding: 0; }
+    .neighbours li + li { margin-top: 4px; }
+    .nrow { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 4px 8px; color: var(--bone); text-decoration: none; background: rgba(13,11,20,.82); border: 2px solid var(--dusk); }
+    .nrow.mine { border-color: var(--amber); background: rgba(245,166,35,.14); }
+    .nrow .face { flex: none; width: 32px; height: 32px; background: var(--dusk); border: 1px solid var(--void); }
+    .nrow .who { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.15; font-size: 14px; color: var(--bone); }
+    .nrow .who b { font: 20px/1.1 var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .nrow .who small { font-size: 11px; color: var(--ash); }
+    .nrow .pips { position: static; display: flex; gap: 2px; font-size: 14px; }
+    .nrow .status { flex: none; font-size: 11px; color: var(--ash); }
+    .nrow .status.ripe { color: var(--candle); }
+  }
+  .setup .own { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; }
+  .setup .own img { width: 48px; height: 48px; image-rendering: pixelated; border: 2px solid var(--candle); }
+  .ev .skin-thumb, .feed-bar .skin-thumb { width: 16px; height: 16px; vertical-align: middle; image-rendering: pixelated; }
+  .expand-row { margin: 8px 0 0; text-align: center; }
+  .expand-row .btn { margin: 0; font-size: 20px; }
+  .expand-row .btn:disabled { opacity: .5; cursor: not-allowed; }
+  /* A 4-wide field on a phone: 2× tiles (64 px, still whole pixels) so it
+     fits 390 px with the scarecrow. */
+  @media (max-width: 599px) {
+    .farm.wide { --tile: 64px; }
+    .farm.wide .tile .note, .farm.wide .tile .shoo { font-size: 14px; white-space: nowrap; }
+  }
+  /* "Invite a neighbour": a small framed card over the map. */
+  #invite { position: fixed; z-index: 45; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(440px, calc(100% - 24px)); max-height: calc(100% - 32px); overflow-y: auto; padding: 4px 6px; color: var(--bone); border: 24px solid transparent; border-image: var(--frame) 16 fill / 24px / 0 round; image-rendering: pixelated; filter: drop-shadow(5px 5px 0 var(--void)); }
+  #invite[hidden] { display: none; }
+  #invite h2 { margin: 0 32px 6px 0; font-size: 28px; color: var(--candle); }
+  #invite p { margin: 6px 0; font-size: 14px; }
+  #invite pre { margin: 6px 0 10px; padding: 8px 10px; font: 12px/1.45 var(--body); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--spirit); background: var(--void); border: 2px solid var(--dusk); }
+  #invite .row .btn { margin: 0; width: 100%; text-align: center; font-size: 21px; min-height: 44px; }
+  #invite .note { color: var(--ash); font-size: 13px; }
+  #invite-close { position: absolute; top: -6px; right: -6px; min-width: 40px; min-height: 40px; font: 20px/1 var(--body); color: var(--bone); background: var(--dusk); border: 2px solid var(--void); cursor: pointer; }
+  /* The Practice Patch link (tutorial only, for me alone). */
+  .practice-row { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 6px auto 12px; text-align: center; }
+  .practice-row .btn { margin: 0; display: inline-flex; align-items: center; gap: 8px; }
+  .practice-row small { color: var(--ash); font-size: 13px; }
+  /* Who robbed me: up to 2 faces, top-left of my tile — -1 for a
+     steal, a tiny ghost for a caught attempt. Tap one for the details. */
+  .grid > .marks { position: relative; z-index: 3; align-self: start; justify-self: start; margin: 2px; display: flex; flex-direction: column; gap: 2px; }
+  .marks .mark { display: flex; align-items: center; gap: 2px; padding: 1px 3px 1px 1px; cursor: pointer; color: inherit; font: inherit; background: rgba(13,11,20,.85); border: 2px solid var(--blood); }
+  .marks .mark.caught { border-color: var(--spirit); }
+  .marks .mark:focus-visible { outline: 2px solid var(--candle); }
+  .marks .mark .thief { position: static; width: 24px; height: 24px; background: var(--dusk); }
+  .marks .mark b, .pip.robbed b { font: 16px/1 var(--display); color: var(--bone); }
+  .pip.robbed { align-items: center; gap: 1px; padding: 0 2px; background: var(--blood); }
+  .pip.robbed .thief { width: 24px; height: 24px; background: var(--dusk); }
+  #mark-pop { position: fixed; z-index: 31; padding: 10px 12px; font-size: 14px; line-height: 1.35; color: var(--bone); background: var(--night); border: 3px solid var(--blood); box-shadow: 4px 4px 0 var(--void); }
+  #mark-pop[hidden] { display: none; }
+  #mark-pop p { margin: 0 0 6px; }
+  #mark-pop .revenge { color: var(--candle); }
+  #mark-pop .left { font: 18px/1 var(--display); }
+  #mark-pop .btn { margin: 4px 0 0; font-size: 20px; }
+
+  /* Pixel icons: sized inline at exactly 1× or 2×; nothing here
+     may stretch them. A 24 px icon gives back 4 px top and bottom, so it
+     doesn't make a line of text taller. */
+  img.ico { position: static; inset: auto; display: inline-block; flex: none; max-width: none; vertical-align: middle; image-rendering: pixelated; animation: none; transform: none; filter: none; }
+  img.ico[width="24"] { margin-block: -4px; }
+  #gear img.ico { margin: 0; }
+  /* An image under a finger or a mouse drag must not start a native image
+     drag: it would swallow the swipe (the away card's text has sprites). */
+  img.ico, #away img { -webkit-user-drag: none; user-select: none; }
+  #away img { pointer-events: none; }
+  .fx-float img.ico { margin-block: -6px; }
+</style>
+<script id="village" type="application/json">__VILLAGE__</script>
+</head>
+<body data-mode="loading">
+<div class="scene" aria-hidden="true"></div>
+<div class="wrap">
+  <div class="top panel">
+    <div class="titlerow"><div class="titles"><h1 id="title">Haunted Farm</h1><p class="sub" id="tagline"></p></div><span id="top-village"></span>
+      <div id="settings">
+        <button type="button" id="gear" aria-haspopup="menu" aria-expanded="false" aria-controls="settings-menu" aria-label="Settings" title="Settings"><img class="ico" data-icon="gear" src="__ART:ui/icon-gear.png__" alt="Settings" width="24" height="24" style="width:24px;height:24px"></button>
+        <div id="settings-menu" role="menu" aria-label="Settings" hidden>
+          <button type="button" role="menuitemcheckbox" id="mute" aria-checked="true"><img class="ico" data-icon="sound-on" src="__ART:ui/icon-sound-on.png__" alt="" width="24" height="24" style="width:24px;height:24px"><span>Sound</span><b class="state">on</b></button>
+          <button type="button" role="menuitemcheckbox" id="ambience" aria-checked="false"><img class="ico" data-icon="music-off" src="__ART:ui/icon-music-off.png__" alt="" width="24" height="24" style="width:24px;height:24px"><span>Music</span><b class="state">off</b></button>
+          <button type="button" role="menuitem" id="menu-replay" hidden><i class="gap"></i><span>Replay tutorial</span></button>
+          <button type="button" role="menuitem" id="menu-rules"><i class="gap"></i><span>How to play</span></button>
+        </div>
+      </div>
+    </div>
+    <div id="hud"></div>
+  </div>
+  <div id="banner"></div>
+  <section id="away" hidden aria-roledescription="carousel" aria-label="While you were away">
+    <div class="away-head"><b>While you were away</b><span id="away-count"></span><button type="button" id="away-close" aria-label="Dismiss">✕</button></div>
+    <div id="away-slide" aria-live="polite"></div>
+    <div class="away-foot"><button type="button" id="away-prev" aria-label="Previous">‹</button><span id="away-dots" aria-hidden="true"></span><button type="button" id="away-next" aria-label="Next">›</button></div>
+  </section>
+  <main id="farms" aria-label="The village"></main>
+</div>
+<footer><a href="/how-to-play.html" id="open-rules">How to play</a></footer>
+<dialog id="rules" aria-labelledby="rules-title">
+  <button class="btn" id="rules-close" aria-label="Close">✕</button>
+  <h2 id="rules-title">How to play</h2>
+  <!--RULES-->
+</dialog>
+<dialog id="seeds" aria-label="Choose a seed">
+  <h2>Plant a seed</h2>
+  <div class="choices"></div>
+  <p><button data-close>Never mind</button></p>
+</dialog>
+<div id="toast" role="status" hidden></div>
+<div id="hud-tip" role="tooltip" hidden></div>
+<div id="mark-pop" role="dialog" aria-label="Who was here" hidden></div>
+<section id="invite" role="dialog" aria-labelledby="invite-h" hidden>
+  <button type="button" id="invite-close" aria-label="Close">✕</button>
+  <h2 id="invite-h">Invite a neighbour</h2>
+  <p>Send a teammate this — it gets them in:</p>
+  <pre id="invite-msg"></pre>
+  <p class="row"><button type="button" class="btn" id="invite-copy">Copy invite message</button></p>
+  <p class="row"><a class="btn" id="invite-go" href="#" target="_blank" rel="noopener">Invite their email in VibeHost →</a></p>
+  <p class="note">Only owners/admins can invite. If you can't, send the message above to your admin.</p>
+  <p class="note" id="invite-free" hidden>Free workspaces fit 3 people — upgrading lets more move in.</p>
+</section>
+<div id="coach" hidden>
+  <div id="coach-spot" aria-hidden="true"></div>
+  <div id="coach-bubble" role="dialog" aria-label="Tutorial" aria-live="polite">
+    <p><span id="coach-count"></span> <span id="coach-text"></span></p>
+    <p class="coach-actions"><button type="button" class="btn" id="coach-ok" hidden>Got it</button><button type="button" id="coach-skip">Skip tutorial</button></p>
+  </div>
+</div>
+<div id="sr" class="sr" role="status" aria-live="polite"></div>
+<dialog id="feed-sheet" aria-labelledby="feed-sheet-h">
+  <div class="grip" aria-hidden="true"></div>
+  <header><h2 id="feed-sheet-h">Lately in the village</h2><button class="btn" id="feed-sheet-close" aria-label="Close">✕</button></header>
+  <ul id="feed-sheet-list"></ul>
+</dialog>
+<dialog id="replace-dlg" aria-labelledby="replace-h">
+  <h2 id="replace-h">Replace your farm?</h2>
+  <p>This link sets up a new farm. Replace <b id="replace-old"></b> with <b id="replace-new"></b>? Your house, plot and candy stay; the farm's name, link and look change.</p>
+  <p class="row"><button class="btn" id="replace-keep">Keep</button> <button class="btn" id="replace-yes">Replace</button></p>
+</dialog>
+<dialog id="move-out-dlg" aria-labelledby="move-out-h">
+  <h2 id="move-out-h">Move out of the village?</h2>
+  <p><b id="move-out-name"></b>, its house and every pumpkin on it go, and the lot goes back up for rent. Your candy and steals stay. You can set up a new farm any time.</p>
+  <p class="row"><button class="btn" id="move-out-yes">Move out</button> <button class="btn" id="move-out-no">Stay</button></p>
+</dialog>
+<dialog id="trick" aria-labelledby="trick-who-h">
+  <img id="trick-ghost" alt="">
+  <h2 id="trick-who-h"><span class="trick-word">TRICK!</span> <span id="trick-who"></span></h2>
+  <p id="trick-cost"></p>
+  <p id="trick-count"></p>
+  <button class="btn" id="trick-go">Go home and shoo it</button>
+</dialog>
+<script>
+  (function () {
+    var c = JSON.parse(document.getElementById("village").textContent);
+    document.body.dataset.weather = c.weather;
+    document.body.style.setProperty("--bg", "url(" + (c.art["backgrounds/" + c.theme + ".png"] || "") + ")");
+    document.body.style.setProperty("--frame", "url(" + (c.art["ui/frame.png"] || "") + ")");
+    document.getElementById("tagline").textContent = c.tagline + (c.weatherName ? " · " + c.weatherName : "");
+  })();
+</script>
+<!--IMPORTMAP-->
+<script src="/__vh/data/sdk.js"></script>
+<script type="module" src="__APP_JS__"></script>
+<!--TRYOUT-->
+</body>
+</html>
