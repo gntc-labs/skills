@@ -76,6 +76,8 @@ if (!/^[0-9a-f]{8}$/.test(String(village.seed))) fail("seed must be 8 lowercase 
 const theme = byId(dice.themes, village.theme, "theme");
 const weather = byId(dice.weathers, village.weather, "weather");
 byId(dice.secrets, village.secret, "secret");
+// Only these two: a private app has no village (nobody else can open it).
+if (![undefined, null, "", "workspace", "public"].includes(village.visibility)) fail(`visibility must be "workspace" or "public" (or left out), got ${JSON.stringify(village.visibility)}: a private village can't be played by anyone else`);
 let villageRules;
 try {
   villageRules = normalizeRules(village.rules);

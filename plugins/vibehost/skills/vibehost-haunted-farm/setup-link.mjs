@@ -67,12 +67,21 @@ export function setupLink(url, raw) {
   const slug = String(raw.slug ?? slugify(name)).trim().toLowerCase();
   const avatar = Number(raw.avatar);
   const scarecrow = String(raw.scarecrow ?? "classic");
-  if (!/^https:\/\/[^/]+$/.test(url)) throw new Error(`--url must be https://<village host>, got "${url}"`);
-  if (!name || [...name].length > 30) throw new Error("the farm name must be 1–30 characters");
-  if (!SLUG_RE.test(slug)) throw new Error(`the link name "${slug}" needs 2–31 lowercase letters, digits or dashes, starting with a letter or digit`);
-  if (!AVATARS.includes(avatar)) throw new Error(`--avatar must be ${AVATARS[0]}–${AVATARS.at(-1)}`);
-  if (!SCARECROW_IDS.includes(scarecrow)) throw new Error(`--scarecrow must be one of ${SCARECROW_IDS.join(", ")}`);
-  const art = customArt({ avatarPng: raw.avatarPng, skinsDir: raw.skinsDir });
+  // Every problem at once, so one fix-up round is enough.
+  const problems = [];
+  if (!/^https:\/\/[^/]+$/.test(url)) problems.push(`--url must be https://<village host>, got "${url}"`);
+  if (!name || [...name].length > 30) problems.push("the farm name must be 1–30 characters");
+  if (!SLUG_RE.test(slug)) problems.push(`the link name "${slug}" needs 2–31 lowercase letters, digits or dashes, starting with a letter or digit`);
+  if (!AVATARS.includes(avatar)) problems.push(`--avatar must be ${AVATARS[0]}–${AVATARS.at(-1)}`);
+  if (!SCARECROW_IDS.includes(scarecrow)) problems.push(`--scarecrow must be one of ${SCARECROW_IDS.join(", ")}`);
+  let art = {};
+  try {
+    art = customArt({ avatarPng: raw.avatarPng, skinsDir: raw.skinsDir });
+  } catch (e) {
+    problems.push(e.message);
+  }
+  if (problems.length === 1) throw new Error(problems[0]);
+  if (problems.length) throw new Error(`${problems.length} problems:\n  - ${problems.join("\n  - ")}`);
   const json = JSON.stringify({ name, slug, avatar, scarecrow, ...art });
   return `${url}/setup#${Buffer.from(json, "utf8").toString("base64url")}`;
 }

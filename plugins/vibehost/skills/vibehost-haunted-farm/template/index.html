@@ -267,9 +267,12 @@
   .house .label b { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .house .you { flex: none; font-style: normal; padding: 0 4px; color: var(--void); background: var(--amber); }
   .house.mine { z-index: 2; }
-  .house.mine .label { border-color: var(--amber); }
-  /* A crisp candle outline, not a soft glow (which blurs pixel art). */
-  .house.mine .house-img { filter: drop-shadow(1px 0 0 var(--candle)) drop-shadow(-1px 0 0 var(--candle)) drop-shadow(0 1px 0 var(--candle)) drop-shadow(0 -1px 0 var(--candle)) drop-shadow(0 3px 0 rgba(13,11,20,.7)); }
+  .house.mine .label { position: relative; z-index: 2; border-color: var(--amber); }
+  /* Yours reads as "you": the house stands on a filled amber plot and wears
+     a solid 2 px candle outline. A 1 px outline alone, on a house sprite
+     with see-through pixels, read as a wireframe. Never a soft glow. */
+  .house.mine::before { content: ""; position: absolute; z-index: 0; left: -22%; right: -22%; top: 58%; height: 30%; background: var(--amber); border: 3px solid var(--void); border-radius: 50%; box-shadow: 0 3px 0 rgba(13,11,20,.7); }
+  .house.mine .house-img { position: relative; z-index: 1; filter: drop-shadow(2px 0 0 var(--candle)) drop-shadow(-2px 0 0 var(--candle)) drop-shadow(0 2px 0 var(--candle)) drop-shadow(0 -2px 0 var(--candle)) drop-shadow(0 3px 0 var(--void)); }
   .house:hover .label, .house:focus-visible .label { border-color: var(--candle); }
   .house.pop-in { animation: pop-in .7s cubic-bezier(.2,1.5,.4,1) both; }
   @keyframes pop-in { 0% { transform: translate(-50%, -50%) scale(0); opacity: 0; } 70% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1); } }
@@ -374,7 +377,7 @@
     .map-wrap { overflow: hidden; }
     .map { width: 100%; }
     .house { width: 46px; justify-content: flex-start; transform: translate(-50%, calc(-50% + 8px)); }
-    .house-img, .house .label { display: none; }
+    .house-img, .house .label, .house.mine::before { display: none; }
     .house .face { position: static; width: 32px; height: 32px; border-width: 2px; }
     .house.mine .face { border-color: var(--amber); box-shadow: 0 0 0 1px var(--candle); }
     .house .short { display: block; max-width: 72px; margin-top: 1px; padding: 0 3px; font: 14px/1.15 var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgba(13,11,20,.88); border: 1px solid var(--dusk); }

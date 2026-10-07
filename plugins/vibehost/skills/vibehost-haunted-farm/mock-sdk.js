@@ -14,11 +14,28 @@
 //              (you and the four plus pretend extras) so districts 1–3 of
 //              the map can be tried.
 //
-// Same surface as the real SDK (apps/vibehost-api/src/services/app-data-sdk.ts):
-// connect() → { player, reason, user, serverTime, now, list, get, put, patch,
-// remove, log, poll }, "$serverTime" substitution, owner-only PUT/DELETE and
-// 409 APP_DATA_VERSION_CONFLICT with `current`. A normal build never contains
-// this file (check.mjs asserts it).
+// THE CONTRACT — the real SDK's shapes (VibeHost's app-data-sdk.ts, which
+// unwraps each answer's `data`). This fake must return exactly these; the
+// game reads them as written here, and dev/mock-sdk.test.mjs holds the fake
+// to them:
+//   connect()              → vh: { player, reason?, user?, serverTime, now(),
+//                             list, get, put, patch, remove, log, poll }
+//                             (from GET me → { player, reason?, user?, serverTime })
+//   vh.list(c, {cursor})   → { docs: Doc[], nextCursor }
+//   vh.get(c, id)          → { doc: Doc }, or null when there is none (404)
+//   vh.put / vh.patch      → { doc: Doc }   (expectedVersion: 0 = create)
+//   vh.remove(c, id)       → null           (204 No Content)
+//   vh.log({since})        → { entries }
+//   Doc = { collection, docId, ownerUserId, data, version, createdAt, updatedAt }
+//   errors: an Error with .status, .code (e.g. APP_DATA_VERSION_CONFLICT on 409,
+//   APP_DATA_RATE_LIMITED on 429), .details; on a 409 .current — the winning
+//   Doc itself, not wrapped; on a 429 .retryAfter — seconds to wait before the
+//   next request (the Retry-After header, else details.retryAfterSeconds).
+//   Reads are limited per app and per visitor IP, so a page must honour it.
+//   check.mjs can make this fake answer 429: scenario.rateLimit =
+//   { ops: ["list", …], times, retryAfter }.
+// Also as the real one: "$serverTime" substitution and owner-only PUT/DELETE.
+// A normal build never contains this file (check.mjs asserts it).
 (function (g) {
   "use strict";
   var MIN = 60 * 1000;
@@ -185,6 +202,7 @@
   }
   function err(status, code, current) {
     var e = new Error(code); e.status = status; e.code = code;
+    e.details = current !== undefined ? { current: current } : undefined;
     if (current !== undefined) e.current = current;
     return e;
   }
@@ -206,20 +224,33 @@
   }
   function me() { return state.me.user && state.me.user.id; }
   function guard() { if (!state.me.player) throw err(403, "APP_DATA_NOT_PLAYER"); }
+  // A scenario's rate limit: the next `times` calls of `ops` answer 429.
+  var limit = S && S.rateLimit ? { ops: S.rateLimit.ops || [], times: S.rateLimit.times || 1, retryAfter: S.rateLimit.retryAfter || 1 } : null;
+  // check.mjs, after the page is up: the next `times` calls of `ops` answer 429.
+  if (S) g.__HF_THROTTLE = function (ops, times, retryAfter) { limit = { ops: ops, times: times, retryAfter: retryAfter }; };
+  function throttle(op) {
+    if (!limit || limit.times <= 0 || limit.ops.indexOf(op) < 0) return;
+    limit.times--;
+    var e = err(429, "APP_DATA_RATE_LIMITED");
+    e.details = { retryAfterSeconds: limit.retryAfter };
+    e.retryAfter = limit.retryAfter;
+    throw e;
+  }
   var later = function (fn) { return Promise.resolve().then(fn); };
 
   var api = {
     list: function (c) {
       g.__HF_CALLS.push("list " + c);
       return later(function () {
+        throttle("list");
         var ids = Object.keys(coll(c)).sort();
         return { docs: ids.map(function (id) { return dto(c, id); }), nextCursor: null };
       });
     },
-    get: function (c, id) { g.__HF_CALLS.push("get " + c + "/" + id); return later(function () { return coll(c)[id] ? { doc: dto(c, id) } : null; }); },
+    get: function (c, id) { g.__HF_CALLS.push("get " + c + "/" + id); return later(function () { throttle("get"); return coll(c)[id] ? { doc: dto(c, id) } : null; }); },
     put: function (c, id, data, o) {
       return later(function () {
-        guard(); o = o || {};
+        throttle("put"); guard(); o = o || {};
         var cur = coll(c)[id];
         if (cur && cur.owner !== me()) throw err(403, "APP_DATA_NOT_PLAYER");
         if (o.expectedVersion !== undefined && (cur ? cur.version : 0) !== o.expectedVersion) throw err(409, "APP_DATA_VERSION_CONFLICT", cur ? dto(c, id) : null);
@@ -228,7 +259,7 @@
     },
     patch: function (c, id, data, o) {
       return later(function () {
-        guard(); o = o || {};
+        throttle("patch"); guard(); o = o || {};
         var cur = coll(c)[id];
         if (!cur) throw err(404, "NOT_FOUND");
         if (cur.version !== o.expectedVersion) throw err(409, "APP_DATA_VERSION_CONFLICT", dto(c, id));
@@ -261,6 +292,10 @@
           var s = r.docs.map(function (d) { return d.docId + ":" + d.version; }).join(",");
           if (s !== last) { last = s; onChange(r.docs); }
           if (!stopped) g.setTimeout(tick, ms);
+        }, function (e) {
+          // As the real one: a 429 waits at least retryAfter (plus 0–1 s jitter).
+          var wait = e && e.retryAfter ? Math.max(ms, e.retryAfter * 1000 + Math.random() * 1000) : ms;
+          if (!stopped) g.setTimeout(tick, wait);
         });
       };
       tick();

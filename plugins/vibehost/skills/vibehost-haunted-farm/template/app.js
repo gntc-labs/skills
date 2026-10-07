@@ -26,7 +26,7 @@
 // Every listener (clicks, keys, the feed sheet, moving out) is wired in events.js.
 
 import { $, CFG, state } from "./core.js";
-import { ensureMine, enterRest, refresh } from "./data.js";
+import { backoff, ensureMine, enterRest, refresh } from "./data.js";
 import { farmOf, migrateMyArt, runSetupLink, viewedFarmId } from "./farms.js";
 import { render } from "./render.js";
 import { showAway } from "./views/away.js";
@@ -104,7 +104,8 @@ async function boot() {
 // refresh the moment it's back), every 30 s once nobody has touched it for
 // 2 minutes, and back to the usual pace on the next touch.
 const poll = { every: 10_000, idleEvery: 30_000, idleAfter: 2 * 60_000, timer: 0, lastInput: performance.now() };
-const pollDelay = () => (performance.now() - poll.lastInput > poll.idleAfter ? Math.max(poll.every, poll.idleEvery) : poll.every);
+// Never sooner than a 429's retryAfter allows.
+const pollDelay = () => Math.max(performance.now() - poll.lastInput > poll.idleAfter ? Math.max(poll.every, poll.idleEvery) : poll.every, backoff.until - Date.now());
 function schedulePoll() {
   clearTimeout(poll.timer);
   poll.timer = 0;
