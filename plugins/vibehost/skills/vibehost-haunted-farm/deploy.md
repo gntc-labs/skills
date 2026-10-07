@@ -61,15 +61,14 @@ MCP:
 
 **e. Check it's live.**
 - `curl -s -o /dev/null -w '%{http_code}' <live url>/` → `200` (public) or `302` to the login page (workspace — curl isn't signed in).
-- `curl -s -o /dev/null -w '%{http_code}' <live url>/__vh/data/sdk.js`:
+- `curl -s -o /dev/null -w '%{http_code}' <live url>/__vh/data/sdk.js` (it answers without a session, for `workspace` and `public` villages alike):
   - `200` → App Data is on.
   - `404` → App Data isn't on for this workspace yet; the page says "The village is resting". Tell the creator in one line: it's rolling out, and the village wakes up by itself — no redeploy. Don't work around it.
-  - `302` (a `workspace` village sends curl to the login page) → skip the probe. Ask the creator to open the village in their browser: the map means it works; "The village is resting" means App Data isn't on yet (as for `404`).
 
 **f. Link previews (a `workspace` village).** Its pages are private, so Slack, LINE or Facebook can't read them and show VibeHost's own card — unless the app's preview override is set. Ask once, in one line, default yes: "Link previews (Slack, LINE…) can show *<village name>* and its tagline to anyone who has the link, even outside your team. OK?"
-- **Yes** → `vibehost app og set --app <slug> --title "<village name> · Haunted Farm" --description "<tagline>" --image site/og.png`. If it fails with `PLAN_LIMIT_EXCEEDED` (a custom picture is a Business feature), run it again without `--image`: the title and tagline still apply, the picture stays VibeHost's. Then: "Chat apps cache link previews, so the new card can take up to a day to show."
+- **Yes** → after the **last** deploy of this session: `vibehost app og set --app <slug> --title "<village name> · Haunted Farm" --description "<tagline>" --image site/og.png`. If it fails with `PLAN_LIMIT_EXCEEDED` (Free can't upload a picture; that's a Business feature), run it again without `--image`: the title and tagline still apply, and the picture stays VibeHost's. Then: "Chat apps cache link previews, so the new card can take up to a day to show. If the preview reverts after a later redeploy, re-run `og set`."
 - **No** → skip it, and say they can set it later (`vibehost app og show <slug>`, then the same `og set`).
-- Write the answer into `vibehost.json` as `"linkPreview": "yes"` or `"no"`. On a later redeploy after the name or tagline changed, a `yes` means run the same `og set` again (the new `site/og.png` carries the new name); don't ask twice.
+- Write the answer into `vibehost.json` as `"linkPreview": "yes"` or `"no"`. A `yes` means: re-run the same `og set` after any later redeploy if the preview reverts, and always after the name or tagline changed (the new `site/og.png` carries the new name); don't ask twice.
 - A `public` village needs none of this: scrapers read its own page, whose tags `build.mjs` writes. MCP only, no CLI: skip it and mention the dashboard (app settings → link preview).
 
 ## 3. Hand-off

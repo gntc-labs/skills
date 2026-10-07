@@ -304,6 +304,45 @@ export default async function gate() {
     );
   });
 
+  // The first live village failed exactly here: a brand-new player in an
+  // empty village sets up, opens their farm and plants. Nothing is seeded —
+  // no players/<me> either — so every doc the page needs, it makes itself.
+  const FIRST_PLANT = "a brand-new player in an empty village: setup, then their own farm, tap an empty tile, Common — a sprout appears, no 'bump' toast";
+  await guarded(FIRST_PLANT, async (ref) => {
+    const NEWBIE = { id: "u_first", name: "Wren", avatarUrl: null };
+    const { page, ctx, errors } = await open(PHONE, { now: SCENARIOS.noFarm.now, me: { player: true, user: NEWBIE }, docs: {} });
+    ref.ctx = ctx;
+    const logged = [];
+    page.on("console", (m) => m.type() === "error" && /haunted-farm/.test(m.text()) && logged.push(m.text()));
+    await ready(page);
+    await page.fill('#setup-form input[name="name"]', "First Furrow");
+    await Promise.all([page.waitForURL(BASE, { timeout: 5000 }), page.click('#setup-form button[type="submit"]')]);
+    await ready(page);
+    await page.goto(`${BASE}farm/first-furrow`);
+    await ready(page);
+    const before = await page.evaluate(() => ({ view: document.body.dataset.view, empty: document.querySelectorAll('.farm.me button.tile[data-act="plant"]').length }));
+    // Every toast while it plants (they leave after a few seconds).
+    await page.evaluate(() => {
+      window.__toasts = [];
+      const t = document.getElementById("toast");
+      new MutationObserver(() => t.hidden || window.__toasts.push(t.textContent)).observe(t, { attributes: true, childList: true, subtree: true, characterData: true });
+    });
+    await page.click('.farm.me button.tile[data-act="plant"][data-i="0"]');
+    await page.click('#seeds button[data-kind="common"]');
+    await page.waitForFunction(() => !!window.__HF_STORE["plots-d1"]?.u_first?.data.tiles[0], null, { timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(500);
+    const after = await page.evaluate(() => ({
+      stored: window.__HF_STORE["plots-d1"]?.u_first?.data.tiles[0]?.kind ?? null,
+      shown: document.querySelector('.farm.me .tile[data-i="0"] img.crop')?.getAttribute("src") ?? null,
+      toasts: [...new Set(window.__toasts)],
+    }));
+    check(
+      FIRST_PLANT,
+      before.view === "mine" && before.empty === 9 && after.stored === "common" && /crops\/common-sprout\.png/.test(after.shown) && !after.toasts.some((x) => /bump/i.test(x)) && logged.length === 0 && errors.length === 0,
+      { before, after, logged, errors },
+    );
+  });
+
   await guarded("spectator: the map read-only (no invites); a farm link is read-only; Play (first tap) goes to how-to-play", async (ref) => {
     const { page, ctx, errors } = await open(PHONE, SCENARIOS.notMember);
     ref.ctx = ctx;

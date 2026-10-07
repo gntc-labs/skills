@@ -172,7 +172,11 @@ async function run(kind, owner, i, extra) {
     else if (e && e.code === "APP_DATA_RATE_LIMITED") toast("Whoa, slow down a little.");
     else if (action.landed) toast("Only part of that was saved — check your connection, then look again.");
     else if (e && e.code === "APP_DATA_VERSION_CONFLICT") toast("Someone got there first — try again.");
-    else toast("Something went bump in the night. Try again.");
+    else {
+      // Unexpected: keep the real error for DevTools, and its code for a bug report.
+      console.error("[haunted-farm]", kind, e);
+      toast(`Something went bump in the night. Try again.${typeof e?.code === "string" ? ` (${e.code})` : ""}`);
+    }
   } finally {
     state.busy = false;
     delete document.body.dataset.busy;

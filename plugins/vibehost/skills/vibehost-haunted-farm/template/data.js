@@ -26,8 +26,18 @@ async function listAll(collection) {
   return out;
 }
 
+// A 429 says how long to wait (retryAfter, seconds): no read before then.
+const backoff = { until: 0 };
+/** Note a 429's retryAfter; returns the wait in ms (0 when the error has none). */
+function noteRateLimit(e) {
+  const ms = e && e.retryAfter > 0 ? e.retryAfter * 1000 : 0;
+  if (ms) backoff.until = Math.max(backoff.until, Date.now() + ms);
+  return ms;
+}
+
 async function refresh() {
   if (!state.vh) return;
+  if (Date.now() < backoff.until) return render(); // rate-limited: redraw, read later
   try {
     const [players, farms] = await Promise.all([listAll("players"), listAll("farms")]);
     // A farm doc counts only when its owner wrote it (docId = owner).
@@ -38,6 +48,7 @@ async function refresh() {
     state.players = newer(state.players, new Map(okPlayers.map(([d, p]) => [d.docId, { version: d.version, player: p, acts: Array.isArray(d.data.acts) ? d.data.acts : [] }])), null, state.meId);
   } catch (e) {
     if (e && e.status === 404) return enterRest();
+    noteRateLimit(e);
   }
   render();
 }
@@ -111,7 +122,7 @@ async function write(collection, id, data) {
       const busy = e && (e.code === "APP_DATA_RATE_LIMITED" || e.status === 429);
       const lost = e && !e.code && !e.status && !(e instanceof E.EngineError); // the network: it may have landed
       if (busy) {
-        await sleep(300 * 2 ** attempt); // the same write, a little later
+        await sleep(Math.max(300 * 2 ** attempt, noteRateLimit(e))); // the same write, a little later (never before retryAfter)
         continue;
       }
       if (!conflict && !lost) throw e;
@@ -170,4 +181,4 @@ function enterRest() {
   render();
 }
 
-export { action, districtOf, ensureMine, enterRest, getDoc, listAll, lotsColl, meP, mine, newActionId, plotsColl, refresh, updateMyFarm, viewDistrict, write };
+export { action, backoff, districtOf, ensureMine, enterRest, getDoc, listAll, lotsColl, meP, mine, newActionId, plotsColl, refresh, updateMyFarm, viewDistrict, write };
