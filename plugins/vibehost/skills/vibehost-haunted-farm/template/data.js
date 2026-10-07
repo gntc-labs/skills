@@ -8,6 +8,12 @@ import { farmIn, playerRead, plotRead } from "./read.js";
 import { render } from "./render.js";
 import { mergeFarm, newer, playerIn, playerOut, plotIn, plotOut, rebasePlayer, rebasePlot, withAct } from "./sync.js";
 
+/** One doc, or null when there is none. The SDK's get() answers `{ doc }`. */
+async function getDoc(collection, id) {
+  const r = await state.vh.get(collection, id);
+  return r ? r.doc : null;
+}
+
 async function listAll(collection) {
   const out = [];
   let cursor;
@@ -52,7 +58,7 @@ async function loadPlots() {
   };
   if (state.route.view === "farm") {
     const ids = [farmBySlug(state.route.slug), state.meId].filter((id, k, a) => id && districtOf(id) && a.indexOf(id) === k);
-    const docs = await Promise.all(ids.map((id) => state.vh.get(plotsColl(districtOf(id)), id)));
+    const docs = await Promise.all(ids.map((id) => getDoc(plotsColl(districtOf(id)), id)));
     docs.forEach(add);
   } else {
     (await listAll(plotsColl(viewDistrict()))).forEach(add);
@@ -63,7 +69,7 @@ async function loadPlots() {
 async function ensureMine() {
   const id = state.meId;
   const at = now();
-  if (await state.vh.get("players", id)) return;
+  if (await getDoc("players", id)) return;
   try {
     await state.vh.put("players", id, playerOut({ ...E.newPlayer(state.vh.user, at), avatar: avatarFor(id) }, at), { expectedVersion: 0 });
   } catch (e) {
@@ -109,7 +115,7 @@ async function write(collection, id, data) {
         continue;
       }
       if (!conflict && !lost) throw e;
-      const fresh = (conflict && e.current) || (await state.vh.get(coll, id));
+      const fresh = (conflict && e.current) || (await getDoc(coll, id));
       if (!fresh) throw e;
       hold(fresh); // run()'s retry (if it comes to that) starts from the winner's doc
       map.get(id).acts = fresh.data.acts;
@@ -147,7 +153,7 @@ async function updateMyFarm(change) {
       return;
     } catch (e) {
       if (e.code !== "APP_DATA_VERSION_CONFLICT" || attempt >= 3) throw e;
-      const d = e.current || (await state.vh.get("farms", me));
+      const d = e.current || (await getDoc("farms", me));
       if (!d) return;
       cur = { version: d.version, farm: d.data }; // the server's copy alone: `change` decides afresh
     }
@@ -164,4 +170,4 @@ function enterRest() {
   render();
 }
 
-export { action, districtOf, ensureMine, enterRest, listAll, lotsColl, meP, mine, newActionId, plotsColl, refresh, updateMyFarm, viewDistrict, write };
+export { action, districtOf, ensureMine, enterRest, getDoc, listAll, lotsColl, meP, mine, newActionId, plotsColl, refresh, updateMyFarm, viewDistrict, write };

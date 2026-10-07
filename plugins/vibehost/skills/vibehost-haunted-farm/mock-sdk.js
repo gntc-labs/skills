@@ -216,7 +216,7 @@
         return { docs: ids.map(function (id) { return dto(c, id); }), nextCursor: null };
       });
     },
-    get: function (c, id) { g.__HF_CALLS.push("get " + c + "/" + id); return later(function () { return coll(c)[id] ? dto(c, id) : null; }); },
+    get: function (c, id) { g.__HF_CALLS.push("get " + c + "/" + id); return later(function () { return coll(c)[id] ? { doc: dto(c, id) } : null; }); },
     put: function (c, id, data, o) {
       return later(function () {
         guard(); o = o || {};

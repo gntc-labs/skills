@@ -82,7 +82,7 @@ if (runAsCommand) {
     const read = dir
       ? (name) => (existsSync(join(dir, name)) ? data(readFileSync(join(dir, name), "utf8")) : [])
       : null;
-    const cli = (...a) => data(execFileSync("vibehost", ["--json", ...a], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
+    const cli = (...a) => data(execFileSync("vibehost", ["--json", ...a], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 256 * 1024 * 1024 }));
     const workspaces = read ? read("workspace-list.json") : cli("workspace", "list");
     const appsByWorkspace = Object.fromEntries(workspaces.map((w) => [w.slug, read ? read(`app-list.${w.slug}.json`) : cli("--workspace", w.slug, "app", "list")]));
     const joinable = read ? read("joinable.json") : cli("workspace", "joinable");

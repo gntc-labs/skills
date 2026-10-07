@@ -4,7 +4,7 @@
 import * as E from "./engine.js";
 import { artIn } from "./art-check.js";
 import { $, now, RULES, state } from "./core.js";
-import { listAll, lotsColl, plotsColl, updateMyFarm } from "./data.js";
+import { getDoc, listAll, lotsColl, plotsColl, updateMyFarm } from "./data.js";
 import { farmIn, isObj } from "./read.js";
 import { AVATARS, IMAGE_LIMITS, SCARECROWS, SKIN_KINDS, SKIN_STAGES, SLUG_RE } from "./shared.js";
 import { freshTutorial, mergeFarm, plotOut } from "./sync.js";
@@ -60,7 +60,7 @@ function cleanFarm(raw) {
 /** Claim the slug (slugs/<slug> is owner-only, so the first PUT wins) and write farms/<you>. */
 async function saveFarm(farm) {
   const me = state.meId;
-  const claimed = await state.vh.get("slugs", farm.slug);
+  const claimed = await getDoc("slugs", farm.slug);
   if (claimed && claimed.ownerUserId !== me) throw new Error(`"${farm.slug}" is taken in this village — pick another link name.`);
   if (!claimed) {
     try {
@@ -78,7 +78,7 @@ async function saveFarm(farm) {
   // The doc is re-read for every attempt (a version race re-reads and
   // re-merges), so a rename never writes back an older tutorial.
   for (let attempt = 0; ; attempt++) {
-    const fresh = await state.vh.get("farms", me);
+    const fresh = await getDoc("farms", me);
     const base = fresh ? mergeFarm(old, fresh.data) : null;
     const carry = base ? { tutorial: base.tutorial, firstCropBoost: base.firstCropBoost } : { tutorial: freshTutorial(), firstCropBoost: false };
     // The pictures go to art/<me> (inline ones from older saves move there too).
@@ -104,7 +104,7 @@ async function saveFarm(farm) {
  */
 async function saveArt(farm, base) {
   const me = state.meId;
-  const cur = await state.vh.get("art", me);
+  const cur = await getDoc("art", me);
   const had = base?.artVersion ? (cur && isObj(cur.data) ? artIn(cur.data) : {}) : { avatarPng: base?.avatarPng, skins: base?.skins };
   const art = {};
   for (const f of ["avatarPng", "skins"]) {
@@ -205,7 +205,7 @@ async function moveOut() {
 /** My plot lives in my district's collection; make it once. */
 async function ensurePlot(district) {
   const me = state.meId;
-  if (await state.vh.get(plotsColl(district), me)) return;
+  if (await getDoc(plotsColl(district), me)) return;
   try {
     await state.vh.put(plotsColl(district), me, plotOut(E.newPlot(), now()), { expectedVersion: 0 });
   } catch (e) {

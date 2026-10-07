@@ -42,6 +42,7 @@ function artOf(id) {
   artCache.set(id, { v, art: null, loading: true });
   state.vh
     .get("art", id)
+    .then((r) => r && r.doc)
     .then((d) => (d && d.ownerUserId === id && isObj(d.data) ? artIn(d.data) : null))
     .catch(() => null)
     .then((art) => {
