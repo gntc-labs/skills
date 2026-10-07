@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to play · __TITLE__</title>
+<!--HEAD-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jersey+10&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root { --void: #0d0b14; --night: #1d1730; --dusk: #3a2a52; --plum: #6b3d7a; --amber: #f5a623; --candle: #ffe08a; --bone: #f2ead8; --ash: #9a93a6; --spirit: #7fe3d4; --pumpkin: #e8731c; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { position: relative; min-height: 100vh; color: var(--bone); background: var(--void); font: 16px/1.5 "Space Mono", ui-monospace, monospace; }
+  /* Fonts: Jersey 10 (one weight, ~1.3× the old sizes) for headings and buttons, Space Mono to read. */
+  html { font-synthesis: style; }
+  h1, h2, .btn { font-family: "Jersey 10", ui-monospace, monospace; font-weight: 400; }
+  /* The theme scene sits behind the first screen and fades into the night
+     below it. Not background-attachment: fixed — mobile Safari ignores it and
+     scales a cover image to the whole (tall) page. */
+  .scene { position: absolute; top: 0; left: 0; right: 0; height: max(100vh, 560px); z-index: 0; pointer-events: none;
+    background: linear-gradient(rgba(13,11,20,.2), rgba(13,11,20,.4)), var(--bg) center top / cover no-repeat;
+    -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
+  /* ui/frame.png as a 9-slice at 2×: the pumpkin corner studs reach 15 px
+     and the wood band ends by 14 px (native), so a 16 px slice keeps every
+     stud whole and starts the dusk centre cleanly. The outside of the frame
+     is transparent. */
+  .panel { border: 32px solid transparent; border-image: var(--frame) 16 fill / 32px / 0 round; image-rendering: pixelated; }
+  img { image-rendering: pixelated; }
+  main { position: relative; z-index: 1; max-width: 680px; margin: 0 auto; padding: 24px 16px 48px; }
+  /* The rules are two columns of illustrated cards on a wide screen. */
+  @media (min-width: 760px) { main { max-width: 920px; } }
+  @media (max-width: 480px) { .card { padding: 12px; } }
+  .card { background: rgba(13,11,20,.9); border: 3px solid var(--plum); padding: 18px; margin-bottom: 18px; }
+  .card.why { border-color: var(--amber); }
+  h1 { margin: 0 0 6px; font-size: 42px; line-height: 1.1; color: var(--candle); text-shadow: 3px 3px 0 var(--void); }
+  h2 { margin: 0 0 8px; color: var(--candle); font-size: 31px; line-height: 1.1; }
+  p { margin: 0 0 10px; }
+  .hero { display: flex; gap: 14px; align-items: center; }
+  .hero img { width: 72px; height: 72px; flex: none; }
+  .btn { font-size: 23px; line-height: 1.2; cursor: pointer; color: var(--void); background: var(--amber); border: 3px solid var(--void); padding: 6px 14px; box-shadow: 3px 3px 0 var(--void); text-decoration: none; display: inline-block; margin: 4px 8px 0 0; }
+  .btn.ghost { background: var(--bone); }
+  code { display: block; white-space: pre-wrap; word-break: break-word; background: var(--night); border: 2px solid var(--dusk); padding: 8px 10px; margin: 6px 0 10px; color: var(--spirit); font: 15px/1.4 ui-monospace, monospace; }
+  section[data-reason] { display: none; }
+  body[data-reason="SIGNED_OUT"] section[data-reason~="SIGNED_OUT"],
+  body[data-reason="NOT_MEMBER"] section[data-reason~="NOT_MEMBER"],
+  body[data-reason="PASSWORD_REQUIRED"] section[data-reason~="PASSWORD_REQUIRED"],
+  body[data-reason="RESTING"] section[data-reason~="RESTING"],
+  body[data-reason="PLAYER"] section[data-reason~="PLAYER"] { display: block; }
+  .muted { color: var(--ash); font-size: 15px; }
+  header.panel { margin-bottom: 2px; }
+  header.panel .muted { color: var(--bone); opacity: .85; margin: 0; }
+  /* "Replay tutorial" is for players only. */
+  .replay { display: none; }
+  body[data-reason="PLAYER"] .replay { display: block; }
+  /* Pixel icons in the rules: sized inline at 1×, never stretched. */
+  img.ico { display: inline-block; vertical-align: middle; image-rendering: pixelated; }
+  img.ico[width="24"] { margin-block: -4px; }
+</style>
+<script id="village" type="application/json">__VILLAGE__</script>
+</head>
+<body data-reason="">
+<div class="scene" aria-hidden="true"></div>
+<main>
+  <header class="panel">
+    <h1 id="vname">Haunted Farm</h1>
+    <p class="muted" id="vline"></p>
+  </header>
+
+  <section class="card why" data-reason="SIGNED_OUT">
+    <div class="hero"><img alt="" data-art="avatars/farmer-1.png"><div>
+      <h2>Sign in to farm here</h2>
+      <p>Sign in to VibeHost — if you're on this village's team, you can play.</p>
+    </div></div>
+    <a class="btn" id="login" href="#">Sign in to VibeHost</a>
+    <a class="btn ghost" href="/">Keep watching</a>
+  </section>
+
+  <section class="card why" data-reason="NOT_MEMBER">
+    <div class="hero"><img alt="" data-art="avatars/farmer-4.png"><div>
+      <h2>This village belongs to another team</h2>
+      <p>Only its team can farm here — but you can grow your own. Want one?</p>
+    </div></div>
+    <p>Ask your coding agent — Claude Code or Codex — in one line:</p>
+    <code id="install"></code>
+    <a class="btn" id="own" href="https://vibehost.com">Get started on VibeHost</a>
+    <a class="btn ghost" href="/">Back to the village</a>
+  </section>
+
+  <section class="card why" data-reason="PASSWORD_REQUIRED">
+    <div class="hero"><img alt="" data-art="props/ghost.png"><div>
+      <h2>The gate is locked</h2>
+      <p>This village has a password. Reload the village and enter it to play.</p>
+    </div></div>
+    <a class="btn" href="/">Back to the village</a>
+  </section>
+
+  <section class="card why" data-reason="PLAYER">
+    <div class="hero"><img alt="" data-art="props/scarecrow.png"><div>
+      <h2>You farm here</h2>
+      <p>You're one of this village's farmers. Here's how it all works — then back to your pumpkins.</p>
+    </div></div>
+    <a class="btn" href="/">← back to my farm</a>
+  </section>
+
+  <section class="card why" data-reason="RESTING">
+    <div class="hero"><img alt="" data-art="props/scarecrow.png"><div>
+      <h2>The village is resting</h2>
+      <p>The farmers are asleep right now. Nothing is lost — your pumpkins keep their place. Come back a little later.</p>
+    </div></div>
+    <a class="btn" href="/">Try again</a>
+  </section>
+
+  <section class="card">
+    <h2>How to play</h2>
+    <!--RULES-->
+  </section>
+</main>
+<script src="/__vh/data/sdk.js"></script>
+<script>
+  (function () {
+    var c = JSON.parse(document.getElementById("village").textContent);
+    var art = function (p) { return (c.art && c.art[p]) || "art/" + p; };
+    document.body.style.setProperty("--bg", "url(" + art("backgrounds/" + c.theme + ".png") + ")");
+    document.body.style.setProperty("--frame", "url(" + art("ui/frame.png") + ")");
+    document.getElementById("vname").textContent = c.name;
+    document.getElementById("vline").textContent = c.tagline || "";
+    document.title = "How to play · " + c.name;
+    [].forEach.call(document.querySelectorAll("img[data-art]"), function (img) { img.src = art(img.getAttribute("data-art")); });
+    // Only the rules this village has on, with its own numbers.
+    var rules = c.rules || { expansion: { on: true, cost: 30, maxCols: 4, maxRows: 4 }, customAvatar: true, cropSkins: true };
+    var on = { expansion: rules.expansion.on, customAvatar: rules.customAvatar, cropSkins: rules.cropSkins };
+    [].forEach.call(document.querySelectorAll("[data-rule]"), function (el) { if (!on[el.getAttribute("data-rule")]) el.parentNode.removeChild(el); });
+    [].forEach.call(document.querySelectorAll('[data-fill="cost"]'), function (el) { el.textContent = rules.expansion.cost; });
+    [].forEach.call(document.querySelectorAll('[data-fill="max"]'), function (el) { el.textContent = rules.expansion.maxCols + "×" + rules.expansion.maxRows; });
+    var village = new URL("/", location.href).href;
+    document.getElementById("login").href = c.loginUrl + (c.loginUrl.indexOf("?") === -1 ? "?" : "&") + "next=" + encodeURIComponent(village);
+    document.getElementById("install").textContent = c.installLine;
+    document.getElementById("own").href = c.homeUrl;
+
+    var KNOWN = ["SIGNED_OUT", "NOT_MEMBER", "PASSWORD_REQUIRED", "RESTING", "PLAYER"];
+    var show = function (r) { document.body.setAttribute("data-reason", KNOWN.indexOf(r) === -1 ? "RESTING" : r); };
+    var asked = new URLSearchParams(location.search).get("reason");
+    if (asked) return show(asked);
+    // Opened directly: ask App Data who this is. Any failure means resting.
+    // A player gets the rules too — never bounced back to the village (that
+    // bounce, a page that redirects itself 40 ms after loading, was the
+    // "How to play" flicker).
+    if (!window.VibeHostData) return show("RESTING");
+    window.VibeHostData.connect().then(function (vh) {
+      show(vh.player ? "PLAYER" : vh.reason || "RESTING");
+    }, function () { show("RESTING"); });
+  })();
+</script>
+</body>
+</html>
