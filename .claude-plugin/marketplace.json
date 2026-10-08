@@ -11,7 +11,7 @@
     {
       "name": "vibehost",
       "description": "Agent skills for VibeHost — deploy, share, and manage static sites via the VibeHost CLI or MCP server, plus two Halloween games you can publish in one prompt: a pumpkin patch and a team haunted farm.",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "author": {
         "name": "GNTC Labs",
         "email": "developer@gntc.com"
