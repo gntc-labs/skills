@@ -48,9 +48,10 @@ npx skills add gntc-labs/skills --skill vibehost-haunted-farm
 
 ## Update
 
-Claude Code — fetches the marketplace and installs the newer version, then restart Claude Code:
+Claude Code — fetch the marketplace first, then install the newer version and restart Claude Code (`plugin update` on its own can check a stale copy of the marketplace and report "already at the latest version"):
 
 ```bash
+claude plugin marketplace update gntc-labs
 claude plugin update vibehost@gntc-labs
 ```
 
