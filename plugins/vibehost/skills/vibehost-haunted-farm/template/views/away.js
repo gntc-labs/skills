@@ -4,9 +4,10 @@ import * as E from "../engine.js";
 import * as FX from "../fx.js";
 import { avatarSrc } from "../art-check.js";
 import { inside } from "../clicks.js";
-import { $, A, CFG, esc, fmtLeft, iconHtml, iconPlain, KIND_NAME, kindOf, now, state } from "../core.js";
+import { $, A, CFG, esc, iconHtml, iconPlain, KIND_NAME, kindOf, now, state } from "../core.js";
 import { mine } from "../data.js";
 import { nameOf } from "../farms.js";
+import { fmtLeft } from "../shared.js";
 
 const seenKey = () => `haunted-farm:seen:${CFG.seed}:${state.meId}`;
 function markSeen() {

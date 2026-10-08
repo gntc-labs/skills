@@ -22,7 +22,7 @@
 | A link name with capitals, spaces or accents | Offer the cleaned one (`setup-link.mjs` without `--slug` prints it). |
 | "My link name is taken" | Pick another in the page's form, or give you one for a new link. |
 | "Make me a face / pumpkin like …" (rule on) | `pixelate.mjs` or `pixel-grid.mjs`, show it, then `setup-link.mjs --avatar-png / --skins`. Chunky: 24×24 faces, 32×32 crops, 16 colours. |
-| "Turn off crop skins" / "bigger field" / "expansion costs 50" | Deployers only: `village-rules.mjs --set …`, rebuild, redeploy. Fields top out at 4×4. |
+| "Turn off crop skins" / "bigger field" / "expansion costs 100 and 300" | Deployers only: `village-rules.mjs --set …`, rebuild, redeploy. Fields top out at 4×4. |
 | "Can more friends play?" | Players are workspace members. Free fits 3; Business the whole team. Invite in the dashboard (`deploy.md` §3). |
 
 ## The project folder

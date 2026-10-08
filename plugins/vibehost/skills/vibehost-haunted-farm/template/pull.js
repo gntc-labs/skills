@@ -5,10 +5,11 @@ import * as E from "./engine.js";
 import * as FX from "./fx.js";
 import { run } from "./actions.js";
 import { inside, NEXT } from "./clicks.js";
-import { $, A, durText, esc, ico, KIND_NAME, kindOf, now, pct, rand, RULES, say, state, toast } from "./core.js";
+import { $, A, esc, ico, KIND_NAME, kindOf, now, pct, rand, say, state, toast } from "./core.js";
 import { meP } from "./data.js";
 import { farmUrl, viewedFarmId } from "./farms.js";
 import { render } from "./render.js";
+import { durText } from "./shared.js";
 import { riskFor } from "./views/farm.js";
 
 // One tap does it; these play the quick pull animation after the tap.
@@ -137,7 +138,7 @@ async function tapAct(btn, act = btn.dataset.act) {
   }
 }
 
-// ── the one confirm: spending 5 candy on a guard ghost ───────────────────
+// ── the one confirm: spending candy on a guard ghost ───────────────────
 
 function closeChip() {
   const chip = document.getElementById("guard-chip");
@@ -161,12 +162,12 @@ function showGuardChip(btn) {
   chip.querySelector(".yes").focus();
 }
 
-/** "Expand? 30 candy ✓ ✕" on the Expand button: only ✓ spends (Enter = ✓, Esc = ✕). */
+/** "Expand? <price> candy ✓ ✕" on the Expand button: only ✓ spends (Enter = ✓, Esc = ✕). */
 function showExpandChip(btn) {
   closeExpandChip();
   closeChip();
   state.freeze++; // the button stays put while the chip points at it
-  const cost = RULES.expansion.cost;
+  const cost = Number(btn.dataset.cost);
   const r = btn.getBoundingClientRect();
   const chip = document.createElement("div");
   chip.id = "expand-chip";
@@ -245,11 +246,11 @@ async function playTrick(h, result, tileRect) {
   const ghost = await FX.ghostBurst(tileRect, A(result.guarded ? "props/guard-ghost.png" : "props/ghost.png"));
   await FX.shakeAndFlash($(".wrap"));
   springBack(h);
-  await showTrickCard(result);
-  // It followed you home: off past the Village button, then to your farm.
+  const choice = await showTrickCard(result);
+  // It followed you home either way: off past the Village button.
   const back = document.querySelector(".to-village")?.getBoundingClientRect();
   await FX.ghostFlyTo(ghost, back || null);
-  if (viewedFarmId() !== state.meId && farmUrl(state.meId)) {
+  if (choice === "home" && viewedFarmId() !== state.meId && farmUrl(state.meId)) {
     location.href = farmUrl(state.meId);
     return "leave";
   }
@@ -271,21 +272,26 @@ function showTrickCard(result) {
   $("#trick").classList.toggle("trap", !!result.guarded);
   $("#trick-who").textContent = result.guarded ? `You walked into ${result.ownerName}'s guard ghost trap!` : `${result.ownerName}'s farm ghost caught you`;
   $("#trick-cost").textContent = trickCost(result);
-  $("#trick-go").textContent = result.practice ? "Back to my farm" : "Go home and shoo it";
   $("#trick-count").textContent = result.practice
     ? `Practice doesn't count toward today's ${E.RULES.dailyStealCap} steals.`
     : `The steal still counted toward today's ${E.RULES.dailyStealCap} (${result.stealsToday} used).`;
   say(`Trick! ${result.guarded ? `You walked into ${result.ownerName}'s guard ghost trap.` : `${result.ownerName}'s ghost caught you.`} ${trickCost(result)}`);
+  // "Keep sneaking" stays on this farm (Esc too); "Back to my farm" goes home.
   return new Promise((resolve) => {
+    let choice = "stay";
     const close = () => {
       dlg.removeEventListener("close", close);
       if (dlg.open) dlg.close();
-      resolve();
+      resolve(choice);
     };
     dlg.addEventListener("close", close);
-    $("#trick-go").onclick = close;
+    $("#trick-stay").onclick = close;
+    $("#trick-go").onclick = () => {
+      choice = "home";
+      close();
+    };
     dlg.showModal();
-    $("#trick-go").focus();
+    $("#trick-stay").focus();
   });
 }
 

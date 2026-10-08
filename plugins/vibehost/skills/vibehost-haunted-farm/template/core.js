@@ -1,8 +1,6 @@
 // Haunted Farm — what every module needs: the village config, the art and icon
 // helpers, the route, the one `state` object, the clock, toasts and the live region.
 
-import * as E from "./engine.js";
-
 const CFG = JSON.parse(document.getElementById("village").textContent);
 const A = (p) => (CFG.art && CFG.art[p]) || `/art/${p}`;
 // What this village allows: baked in at deploy (village.json), so only
@@ -83,15 +81,6 @@ const firstVisible = (sel) => [...document.querySelectorAll(sel)].find(visible) 
 
 // ── rendering ─────────────────────────────────────────────────────────
 
-const fmtLeft = (ms) => {
-  if (ms <= 0) return "now";
-  const m = Math.ceil(ms / E.MIN);
-  return m >= 60 ? `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}` : `${m}m`;
-};
-/** A duration the way the page says it: "30 min", "2 h". */
-function durText(ms) {
-  return ms % E.HOUR ? `${ms / E.MIN} min` : `${ms / E.HOUR} h`;
-}
 const pct = (x) => Math.round(x * 100);
 const VILLAGE_BTN = `<a class="btn to-village" href="/">${ico("map", "")} Village</a>`;
 
@@ -112,4 +101,4 @@ const say = (msg, { append = false } = {}) => {
   saidAt = performance.now();
 };
 
-export { $, A, CFG, durText, esc, firstVisible, fmtLeft, ico, iconHtml, iconPlain, ICONS, KIND_NAME, kindOf, now, pct, rand, RULES, say, state, toast, VILLAGE_BTN };
+export { $, A, CFG, esc, firstVisible, ico, iconHtml, iconPlain, ICONS, KIND_NAME, kindOf, now, pct, rand, RULES, say, state, toast, VILLAGE_BTN };

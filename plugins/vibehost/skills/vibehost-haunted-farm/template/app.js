@@ -91,19 +91,19 @@ async function boot() {
   if (state.mode === "play" && farmOf(state.meId) && (state.route.view === "home" || viewedFarmId() === state.meId)) showAway();
   // Land on the map with your house in view (the map may scroll sideways).
   document.querySelector(".house.mine")?.scrollIntoView({ block: "nearest", inline: "center" });
-  // An SDK may say how often its clock moves meaningfully (tickMs); the
-  // real one doesn't, and the village redraws every 20 s.
-  const tick = state.vh && state.vh.tickMs ? Math.max(500, state.vh.tickMs) : 20_000;
-  poll.every = Math.min(10_000, Math.max(3_000, tick * 3));
+  // Countdowns run in seconds, so the village redraws every second (an SDK
+  // may ask for another cadence with tickMs).
+  const tick = state.vh && state.vh.tickMs ? Math.max(500, state.vh.tickMs) : 1000;
   schedulePoll();
   setInterval(() => document.hidden || render(), tick);
 }
 
 // ── polling: only while someone's looking ─────────────────────────────
-// Every open tab lists the village: paused while the tab is hidden (one
-// refresh the moment it's back), every 30 s once nobody has touched it for
-// 2 minutes, and back to the usual pace on the next touch.
-const poll = { every: 10_000, idleEvery: 30_000, idleAfter: 2 * 60_000, timer: 0, lastInput: performance.now() };
+// Every open tab lists the village: every 5 s while someone's here (a 30 s
+// steal window shows within one poll), every 15 s once nobody has touched it
+// for 2 minutes, paused while the tab is hidden (one refresh the moment it's
+// back), and back to the usual pace on the next touch.
+const poll = { every: 5_000, idleEvery: 15_000, idleAfter: 2 * 60_000, timer: 0, lastInput: performance.now() };
 // Never sooner than a 429's retryAfter allows.
 const pollDelay = () => Math.max(performance.now() - poll.lastInput > poll.idleAfter ? Math.max(poll.every, poll.idleEvery) : poll.every, backoff.until - Date.now());
 function schedulePoll() {

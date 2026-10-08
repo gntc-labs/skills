@@ -191,7 +191,7 @@
   #risk-hint { position: fixed; z-index: 15; transform: translate(-50%, calc(-100% - 8px)); padding: 6px 10px; font-size: 14px; white-space: nowrap; text-align: center; color: var(--bone); background: var(--plum); border: 3px solid var(--void); box-shadow: 3px 3px 0 var(--void); pointer-events: none; }
   #risk-hint.raised { background: var(--blood); }
   #risk-hint small { display: block; font-size: 12px; color: var(--candle); }
-  /* The one confirm: spending 5 candy on a guard ghost. */
+  /* The one confirm: spending candy on a guard ghost. */
   #guard-chip, #expand-chip { position: fixed; z-index: 16; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; font: 20px/1.2 var(--display); white-space: nowrap; color: var(--void); background: var(--spirit); border: 3px solid var(--void); box-shadow: 3px 3px 0 var(--void); }
   #guard-chip button, #expand-chip button { font: inherit; cursor: pointer; min-width: 34px; min-height: 34px; border: 2px solid var(--void); }
   #guard-chip .yes, #expand-chip .yes { background: var(--lime); }
@@ -317,7 +317,9 @@
   .trick-word { display: block; font-size: 68px; line-height: 1; color: var(--blood); text-shadow: 3px 3px 0 var(--void), 0 0 12px rgba(163,36,59,.8); }
   dialog#trick p { margin: 0 0 10px; }
   #trick-count { color: var(--ash); font-size: 15px; }
-  #trick-go { margin: 6px 0 0; font-size: 26px; }
+  .trick-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 6px 0 0; }
+  .trick-btns .btn { margin: 0; font-size: 24px; }
+  #trick-go { background: var(--bone); }
   /* "While you were away": a small card, one event at a time, no
      backdrop — the game stays tappable around it. Phone: bottom, full width
      minus 16 px; desktop: bottom-right, ~340 px. */
@@ -535,7 +537,7 @@
   <h2 id="trick-who-h"><span class="trick-word">TRICK!</span> <span id="trick-who"></span></h2>
   <p id="trick-cost"></p>
   <p id="trick-count"></p>
-  <button class="btn" id="trick-go">Go home and shoo it</button>
+  <p class="trick-btns"><button class="btn" id="trick-stay">Keep sneaking</button> <button class="btn ghost" id="trick-go">Back to my farm</button></p>
 </dialog>
 <script>
   (function () {

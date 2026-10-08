@@ -22,7 +22,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // How many checks each run makes: [gate, all] for a normal / a try-out build.
-const COUNTS = { normal: [19, 109], mock: [27, 116] };
+const COUNTS = { normal: [23, 113], mock: [31, 120] };
 const all = args.includes("--all");
 if (all && args.includes("--gate")) die("--gate and --all: pick one");
 let suites = [];

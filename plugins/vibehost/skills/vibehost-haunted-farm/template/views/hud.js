@@ -6,14 +6,22 @@ import { $, CFG, esc, ico, pct, state, VILLAGE_BTN } from "../core.js";
 import { meP, mine } from "../data.js";
 import { viewedFarmId } from "../farms.js";
 import { render } from "../render.js";
+import { durText } from "../shared.js";
 
 function bannerHtml(t) {
   if (state.mode === "rest") {
     return `<div class="banner"><b>The village is resting.</b> The farmers are asleep for now — come back a little later. <a class="btn" href="/how-to-play.html?reason=RESTING">What's going on?</a></div>`;
   }
   if (state.mode === "watch") {
-    const why = { SIGNED_OUT: "You're watching.", NOT_MEMBER: "You're visiting another team's village.", PASSWORD_REQUIRED: "You're watching." }[state.reason] || "You're watching.";
-    return `<div class="banner">${why} Only this village's team can farm here. <button class="btn" id="play">Play</button></div>`;
+    // Why I can't play, by the SDK's reason (VibeHost's playerStatus).
+    if (state.reason === "SIGNED_OUT") {
+      const login = `${CFG.loginUrl}${CFG.loginUrl.includes("?") ? "&" : "?"}next=${encodeURIComponent(location.href)}`;
+      return `<div class="banner" data-reason="SIGNED_OUT">Sign in to farm in this village. <a class="btn" id="sign-in" href="${esc(login)}">Sign in</a></div>`;
+    }
+    if (state.reason === "NOT_MEMBER") {
+      return `<div class="banner" data-reason="NOT_MEMBER">You can look around, but only members of this village's VibeHost workspace can farm here. <a class="btn" id="how-to-join" href="/how-to-play.html?reason=NOT_MEMBER#join">How to join</a></div>`;
+    }
+    return `<div class="banner" data-reason="${esc(state.reason || "")}">You're watching. Only this village's team can farm here. <button class="btn" id="play">Play</button></div>`;
   }
   return "";
 }
@@ -24,8 +32,8 @@ function bannerHtml(t) {
 // shows the long wording, a phone the short one (CSS picks, by .long/.short).
 
 /** When the daily counters reset, in words that are true here. */
-const resetsWhen = () =>
-  CFG.mock ? "at midnight Taipei time — in game time, which runs fast in this try-out" : "at midnight Taipei time";
+// Only a try-out whose clock was sped up runs on game time.
+const resetsWhen = () => ((state.vh?.speed ?? 1) > 1 ? "at midnight Taipei time — in game time, which runs fast in this try-out" : "at midnight Taipei time");
 
 function chip(key, long, short, tip, { cls = "", tag = "span", attrs = "" } = {}) {
   const t = esc(tip);
@@ -57,7 +65,7 @@ function hudHtml(t) {
       { cls: `count${n ? "" : " out"}` },
     );
   const steals = counter("steals", ico("sack", ""), "steal", stealsLeft, E.RULES.dailyStealCap, "Steals: pinching a ripe pumpkin from a neighbour's farm");
-  const helps = counter("helps", ico("water", ""), "help", helpsLeft, E.RULES.dailyHelpCap, "Helps: watering a neighbour's pumpkin or chasing a ghost off their farm (+1 candy each)");
+  const helps = counter("helps", ico("water", ""), "help", helpsLeft, E.RULES.dailyHelpCap, `Helps: watering a pumpkin (yours too, ${pct(E.RULES.helpBoost)}% sooner) or chasing a ghost off a neighbour's farm (+${E.RULES.helpReward} candy for a neighbour's)`);
   const onMyFarm = state.route.view === "farm" && viewedFarmId() === state.meId;
   const guardsLeft = onMyFarm ? Math.max(0, E.RULES.maxGuards - E.activeGuards(mine()?.plot ?? E.newPlot(), t)) : 0;
   const guardBtn = onMyFarm
@@ -65,7 +73,7 @@ function hudHtml(t) {
         "guards",
         state.guardMode ? `${ico("ghost", "")} Pick a pumpkin…` : `${ico("ghost", "")} Guard: ${guardsLeft} left`,
         state.guardMode ? "pick…" : `guard ${guardsLeft}`,
-        `Guard ghosts: tap, then a pumpkin, to post one (${E.RULES.guardCost} candy, ${pct(E.RULES.guardCatchChance)}% catch chance there, ${E.RULES.guardLastsMs / E.HOUR} hours). Up to ${E.RULES.maxGuards} on your farm; only you can see them.`,
+        `Guard ghosts: tap, then a pumpkin, to post one (${E.RULES.guardCost} candy, ${pct(E.RULES.guardCatchChance)}% catch chance there, for ${durText(E.RULES.guardLastsMs)}). Up to ${E.RULES.maxGuards} on your farm; only you can see them.`,
         { tag: "button", cls: `hudbtn${state.guardMode ? " on" : ""}`, attrs: ` id="guard-mode" aria-pressed="${state.guardMode}"` },
       )
     : "";

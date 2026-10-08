@@ -256,7 +256,7 @@ const ICON_TEXT = () => {
 // Custom avatars / skins are shown only once their pixels pass; wait for every check.
 const pngsSettled = (page) =>
   page.waitForFunction(() => ![...(window.__hauntedFarmPng?.values() ?? [])].includes("pending") && ![...(window.__hauntedFarmArt?.values() ?? [])].some((a) => a.loading), null, { timeout: 5000 });
-const RULES_OFF = { customAvatar: false, expansion: { on: false, cost: 30, maxCols: 4, maxRows: 4 }, cropSkins: false };
+const RULES_OFF = { customAvatar: false, expansion: { on: false, costs: [150, 400], maxCols: 4, maxRows: 4 }, cropSkins: false };
 const ready = async (page) => {
   await page.waitForFunction(() => window.__hauntedFarm && window.__hauntedFarm.ready === true && document.readyState === "complete", null, { timeout: 8000 });
   // Measure with the fonts in place (display=swap would show the fallback first).
@@ -282,6 +282,8 @@ async function tap(page, selector) {
 // A check whose steps throw (a selector never appears, a wait times out)
 // is that check FAILING, not the whole run crashing.
 async function guarded(name, fn) {
+  // HF_ONLY=<words>: run only the checks whose name has them (while working on a few).
+  if (process.env.HF_ONLY && !process.env.HF_ONLY.split("|").some((w) => name.includes(w))) return;
   const ref = {};
   try {
     await fn(ref);

@@ -28,7 +28,8 @@
 //
 // Spec: docs/superpowers/specs/2026-10-06-haunted-farm-design.md "Game rules (v1)".
 
-export const MIN = 60 * 1000;
+export const SEC = 1000;
+export const MIN = 60 * SEC;
 export const HOUR = 60 * MIN;
 
 export const RULES = Object.freeze({
@@ -36,38 +37,37 @@ export const RULES = Object.freeze({
   baseCols: 3,
   baseRows: 3,
   kinds: Object.freeze({
-    common: Object.freeze({ growMs: 30 * MIN, cost: 0, yield: 4 }),
-    rare: Object.freeze({ growMs: 2 * HOUR, cost: 5, yield: 8 }),
-    legendary: Object.freeze({ growMs: 6 * HOUR, cost: 15, yield: 20 }),
+    common: Object.freeze({ growMs: 1 * MIN, cost: 0, yield: 4 }),
+    rare: Object.freeze({ growMs: 5 * MIN, cost: 10, yield: 8 }),
+    legendary: Object.freeze({ growMs: 15 * MIN, cost: 40, yield: 20 }),
   }),
   secretChance: 0.01, // on Legendary only
-  stealOpensAfterMs: 15 * MIN,
+  stealOpensAfterMs: 30 * SEC,
   stealAmount: 1,
   maxStealsPerCrop: 2,
   ownerKeepsAtLeast: 0.5,
-  dailyStealCap: 20,
+  dailyStealCap: 100,
   stealSuccessChance: 0.7,
   ghostSlowdown: 0.5, // a haunted crop grows at half speed
-  ghostChaseCost: 2,
-  helpBoost: 0.1, // a help makes the crop ripen 10% (of its grow time) sooner
-  helpReward: 1,
-  dailyHelpCap: 10,
-  // Rotting, counted from the moment the crop ripened.
-  // Per variety — going off (half value) after max(its grow
-  // time, 2 h) ripe, rotten (worth nothing, must be cleared) after twice
-  // that: Common/Rare 2 h / 4 h, Legendary (and the secret) 6 h / 12 h.
-  goingOffMinMs: 2 * HOUR,
+  ghostChaseCost: 3,
+  helpBoost: 0.25, // a watering makes the crop ripen 25% (of its grow time) sooner
+  helpReward: 1, // for watering a neighbour's crop (your own earns nothing)
+  dailyHelpCap: 100, // waterings and chases, your own crops included
+  // Rotting, counted from the moment the crop ripened, per variety: going
+  // off (half value) after goingOffFactor × its grow time, rotten (worth
+  // nothing, must be cleared) after twice that.
+  goingOffFactor: 5,
   // Fighting back. Catch chance = 1 - stealSuccessChance
   // (30%) unless raised by revenge or a guard; both together hit the cap.
-  revengeWindowMs: 10 * MIN,
+  revengeWindowMs: 2 * MIN,
   revengeCatchChance: 0.6,
   guardCatchChance: 0.6,
   catchChanceCap: 0.8,
-  guardCost: 5,
+  guardCost: 10,
   maxGuards: 2,
-  guardLastsMs: 6 * HOUR,
+  guardLastsMs: 10 * MIN,
   // Beginner's luck: a farmer's very first crop ripens this soon.
-  beginnersLuckMs: 5 * MIN,
+  beginnersLuckMs: 20 * SEC,
   eventsKept: 20,
   // Thief marks on a tile: every steal (≤ 2 a crop) plus the
   // newest caught attempts, at most this many in all.
@@ -116,11 +116,21 @@ export function plotSize(plot) {
 }
 
 // ── farm expansion ───────────────────────────────────────
-// The village config sets the price and the largest field (`rules`:
-// { cost, maxCols, maxRows }; defaults 30 candy, 4×4). Each step adds a row
-// while there are no more rows than columns, else a column: 3×3 → 3×4 → 4×4.
+// The village config sets the prices and the largest field (`rules`:
+// { costs, maxCols, maxRows }; defaults 150 then 400 candy, 4×4). Each step
+// adds a row while there are no more rows than columns, else a column:
+// 3×3 → 3×4 → 4×4. `costs[k]` is the price of step k (the last one repeats).
 
-export const EXPANSION_DEFAULTS = Object.freeze({ cost: 30, maxCols: 4, maxRows: 4 });
+export const EXPANSION_DEFAULTS = Object.freeze({ costs: Object.freeze([150, 400]), maxCols: 4, maxRows: 4 });
+
+/** What the next step of field costs (null at the largest). */
+export function expandCost(plot, rules = EXPANSION_DEFAULTS) {
+  if (!nextSize(plot, rules)) return null;
+  const { cols, rows } = plotSize(plot);
+  const step = cols - RULES.baseCols + (rows - RULES.baseRows);
+  const costs = rules.costs ?? [rules.cost];
+  return costs[Math.min(step, costs.length - 1)];
+}
 
 /** The size one step up, or null at the largest field. */
 export function nextSize(plot, rules = EXPANSION_DEFAULTS) {
@@ -135,14 +145,15 @@ export function nextSize(plot, rules = EXPANSION_DEFAULTS) {
 export function expand({ player, plot, rules = EXPANSION_DEFAULTS }) {
   const next = nextSize(plot, rules);
   if (!next) fail("MAX_SIZE", "Your field is as big as it gets.");
-  if (player.candy < rules.cost) fail("NOT_ENOUGH_CANDY");
+  const cost = expandCost(plot, rules);
+  if (player.candy < cost) fail("NOT_ENOUGH_CANDY");
   const { cols } = plotSize(plot);
   const tiles = Array.from({ length: next.cols * next.rows }, (_, i) => {
     const r = Math.floor(i / next.cols);
     const c = i % next.cols;
     return c < cols ? (plot.tiles[r * cols + c] ?? null) : null;
   });
-  return { player: { ...player, candy: player.candy - rules.cost }, plot: { ...plot, tiles, cols: next.cols, rows: next.rows } };
+  return { player: { ...player, candy: player.candy - cost }, plot: { ...plot, tiles, cols: next.cols, rows: next.rows } };
 }
 
 export function newPlayer(user, now) {
@@ -211,7 +222,7 @@ export function yieldOf(tile) {
 
 /** How long a ripe crop of `kind` stays fresh before going off. By variety, so a crop planted under older rules rots on today's clock. */
 export function goingOffAfter(kind) {
-  return Math.max(RULES.kinds[kind].growMs, RULES.goingOffMinMs);
+  return RULES.goingOffFactor * RULES.kinds[kind].growMs;
 }
 /** …and how long until it's rotten: twice that. */
 export function rottenAfter(kind) {
@@ -380,7 +391,7 @@ export function clearRotten({ plot, i, now }) {
   return { plot: setTile(plot, i, null) };
 }
 
-/** Post a guard ghost on one of your own crops: 5 candy, max 2 per farm, 6 h. */
+/** Post a guard ghost on one of your own crops: RULES.guardCost candy, at most RULES.maxGuards per farm, for RULES.guardLastsMs. */
 export function placeGuard({ player, plot, i, now }) {
   const tile = tileAt(plot, i);
   if (!isCrop(tile)) fail("NOTHING_TO_GUARD", "Guards stand watch over a crop.");
@@ -512,12 +523,15 @@ export function steal({ thief, thiefId, thiefPlot, victimId, victimPlot, i, now,
 // ── helping ──────────────────────────────────────────────────────────
 
 /**
- * Water a neighbour's growing crop, or chase a ghost off it. The crop ripens
- * 10% sooner (a growing crop only), the helper gets a candy. One help per
- * helper per crop; RULES.dailyHelpCap helps a day.
+ * Water a growing crop, or chase a ghost off a neighbour's. The crop
+ * ripens RULES.helpBoost of its grow time sooner (a growing crop only).
+ * Your own crops can be watered too (chasing your own ghost is
+ * chaseOwnGhost): a neighbour's earns a candy, your own nothing. Once per
+ * person per crop; RULES.dailyHelpCap a day, your own included.
  */
 export function help({ helper, helperId, ownerId, plot, i, action, now }) {
-  if (helperId === ownerId) fail("OWN_CROP", "Helping is for neighbours.");
+  const own = helperId === ownerId;
+  if (own && action !== "water") fail("OWN_CROP", "Helping is for neighbours.");
   helper = freshDay(helper, now);
   if (helper.helpsToday >= RULES.dailyHelpCap) {
     fail("DAILY_HELP_CAP", `You've helped ${RULES.dailyHelpCap} times today — kind!`);
@@ -544,16 +558,10 @@ export function help({ helper, helperId, ownerId, plot, i, action, now }) {
       helpedBy: [...(next.helpedBy || []), helperId],
     };
   }
+  const counted = { ...helper, candy: helper.candy + (own ? 0 : RULES.helpReward), helps: (helper.helps || 0) + 1, helpsToday: helper.helpsToday + 1 };
   return {
-    helper: withEvent(
-      {
-        ...helper,
-        candy: helper.candy + RULES.helpReward,
-        helps: (helper.helps || 0) + 1,
-        helpsToday: helper.helpsToday + 1,
-      },
-      { t: action === "water" ? "help" : "chase", victim: ownerId, kind: kindOf(tile), at: now },
-    ),
+    // Your own watering is between you and your pumpkin: no feed event.
+    helper: own ? counted : withEvent(counted, { t: action === "water" ? "help" : "chase", victim: ownerId, kind: kindOf(tile), at: now }),
     plot: setTile(plot, i, next),
   };
 }
