@@ -12,7 +12,9 @@ import { replayTutorial } from "./tutorial.js";
 (function rulesCopy() {
   const on = { expansion: RULES.expansion.on, customAvatar: RULES.customAvatar, cropSkins: RULES.cropSkins };
   for (const el of document.querySelectorAll("[data-rule]")) if (!on[el.dataset.rule]) el.remove();
-  for (const el of document.querySelectorAll('[data-fill="cost"]')) el.textContent = RULES.expansion.cost;
+  const costs = RULES.expansion.costs ?? [RULES.expansion.cost]; // an older single price
+  for (const el of document.querySelectorAll('[data-fill="costs"]')) el.textContent = costs.join(", then ");
+  for (const el of document.querySelectorAll('[data-fill="costs-short"]')) el.textContent = costs.join(" / ");
   for (const el of document.querySelectorAll('[data-fill="max"]')) el.textContent = `${RULES.expansion.maxCols}×${RULES.expansion.maxRows}`;
 })();
 

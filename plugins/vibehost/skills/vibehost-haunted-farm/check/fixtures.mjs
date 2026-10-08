@@ -1,13 +1,30 @@
 // Haunted Farm checks — fixtures: a fixed clock, the docs of a small village,
 // and the scenarios (who I am, what the store holds) each check opens with.
+import { EXPANSION_DEFAULTS, goingOffAfter, rottenAfter, RULES } from "../template/engine.js";
 import { GROW_MS, SCARECROW_IDS } from "../template/shared.js";
 import { deflateSync } from "node:zlib";
+
+const RULES_EXPANSION_COSTS = EXPANSION_DEFAULTS.costs;
 
 const NOW = Date.UTC(2026, 9, 24, 12, 0, 0); // 2026-10-24 20:00 Taipei
 const H = 3600e3;
 const at = (ms) => new Date(NOW - ms).toISOString();
-// Grow times come from the engine (GROW_MS). Going off after
-// max(grow, 2 h) ripe, rotten at twice that: Common/Rare 2 h / 4 h, Legendary 6 h / 12 h.
+// Every age below comes from the engine's rules, by what the crop should be
+// doing now (AGE.ripe: ripe, open to steals, fresh; …), so a change of pace
+// moves the fixtures with it.
+const SEC = 1000;
+const AGE = {
+  /** Ripe, open to steals, still fresh. */
+  ripe: (k, extra = 10 * SEC) => GROW_MS[k] + RULES.stealOpensAfterMs + extra,
+  /** Ripe, but the owner's grace time hasn't run out: not stealable yet. */
+  ripeClosed: (k) => GROW_MS[k] + RULES.stealOpensAfterMs / 2,
+  /** `f` of the way to ripe. */
+  growing: (k, f = 0.5) => GROW_MS[k] * f,
+  /** Going off (half value), `extra` past it. */
+  off: (k, extra = 10 * SEC) => GROW_MS[k] + goingOffAfter(k) + extra,
+  /** Rotten. */
+  rotten: (k, extra = 30 * SEC) => GROW_MS[k] + rottenAfter(k) + extra,
+};
 const tile = (kind, agoMs, over = {}) => ({
   kind,
   secret: false,
@@ -45,9 +62,9 @@ const VILLAGE_DOCS = {
         steals: 4,
         // What Bob did to Alice's farm while she was away (the away card).
         events: [
-          { t: "steal", victim: "u_alice", kind: "rare", at: at(1 * H) },
-          { t: "caught", victim: "u_alice", kind: "rare", at: at(0.5 * H) },
-          { t: "steal", victim: "u_x", kind: "common", at: at(0.4 * H) },
+          { t: "steal", victim: "u_alice", kind: "rare", at: at(60 * 60e3) },
+          { t: "caught", victim: "u_alice", kind: "rare", at: at(30 * 60e3) },
+          { t: "steal", victim: "u_x", kind: "common", at: at(24 * 60e3) },
         ],
       }),
       5,
@@ -58,14 +75,14 @@ const VILLAGE_DOCS = {
       "u_alice",
       {
         tiles: [
-          tile("common", 1 * H), // ripe 30 min ago: harvest +4
-          tile("rare", 1 * H), // 1 h to go
-          tile("legendary", 1 * H, { ghostSince: at(0.5 * H) }), // haunted
+          tile("common", AGE.ripe("common")), // ripe: harvest +4
+          tile("rare", AGE.growing("rare")), // half grown
+          tile("legendary", AGE.growing("legendary", 0.2), { ghostSince: at(AGE.growing("legendary", 0.1)) }), // haunted
           null,
-          tile("legendary", 1 * H, { secret: true }), // 5 h to go
-          tile("common", 0.5 * H + 2.5 * H), // ripe 2.5 h ago: went off 30 min ago
-          tile("common", 0.5 * H + 5 * H), // rotten: clear it
-          tile("common", 0.1 * H, { helpedBy: ["u_bob"] }),
+          tile("legendary", AGE.growing("legendary", 0.2), { secret: true }),
+          tile("common", AGE.off("common")), // going off
+          tile("common", AGE.rotten("common")), // rotten: clear it
+          tile("common", AGE.growing("common", 0.2), { helpedBy: ["u_bob"] }),
           null,
         ],
       },
@@ -75,15 +92,15 @@ const VILLAGE_DOCS = {
       "u_bob",
       {
         tiles: [
-          tile("common", 1 * H), // ripe, stealable, worth 4
-          tile("rare", 3 * H, { stolen: 1, stolenBy: ["u_x"], guardSince: at(1 * H) }), // guarded, worth 7
+          tile("common", AGE.ripe("common")), // ripe, stealable, worth 4
+          tile("rare", AGE.ripe("rare"), { stolen: 1, stolenBy: ["u_x"], guardSince: at(RULES.guardLastsMs / 2) }), // guarded, worth 7
           null,
-          tile("common", 0.2 * H), // growing
-          tile("rare", 2.1 * H), // ripe, steal window not open yet
-          { ghostOnly: true, ghostSince: at(0.2 * H) },
-          tile("legendary", 3 * H),
-          tile("rare", 2 * H + 3 * H), // going off: worth 4 (8 halved)
-          tile("common", 0.5 * H + 6 * H), // rotten: not stealable
+          tile("common", AGE.growing("common", 0.2)), // growing
+          tile("rare", AGE.ripeClosed("rare")), // ripe, steal window not open yet
+          { ghostOnly: true, ghostSince: at(12 * 60e3) },
+          tile("legendary", AGE.growing("legendary")),
+          tile("rare", AGE.off("rare")), // going off: worth 4 (8 halved)
+          tile("common", AGE.rotten("common")), // rotten: not stealable
         ],
       },
       6,
@@ -110,18 +127,18 @@ const settle = (docs, k, n, over = {}) => {
   docs.slugs[`f${k}`] = doc(id, { userId: id });
   (docs[`lots-d${district}`] ??= {})[lot] = doc(id, { userId: id });
   docs.players[id] = doc(id, player(`Farmer ${k}`, 1, over.player));
-  (docs[`plots-d${district}`] ??= {})[id] = doc(id, { tiles: over.tiles ?? [tile("common", 0.2 * H), null, null, null, null, null, null, null, null] });
+  (docs[`plots-d${district}`] ??= {})[id] = doc(id, { tiles: over.tiles ?? [tile("common", AGE.growing("common", 0.2)), null, null, null, null, null, null, null, null] });
   return docs;
 };
 // Nine farmers: Alice, Bob and f1–f6 fill district 1; f7 is the 9th and
-// opens district 2. f6 stole from Alice 3 minutes ago ([warning] pip on its house);
+// opens district 2. f6 stole from Alice a minute ago ([warning] pip on its house);
 // f7 has a ripe pumpkin to steal across districts.
 const crowd = () => {
   const docs = copy();
   for (let k = 1; k <= 7; k++)
     settle(docs, k, k + 2, {
-      player: k === 6 ? { events: [{ t: "steal", victim: "u_alice", kind: "common", at: at(3 * 60e3) }] } : {},
-      tiles: k === 7 ? [tile("common", 1 * H), null, null, null, null, null, null, null, null] : undefined,
+      player: k === 6 ? { events: [{ t: "steal", victim: "u_alice", kind: "common", at: at(60e3) }] } : {},
+      tiles: k === 7 ? [tile("common", AGE.ripe("common")), null, null, null, null, null, null, null, null] : undefined,
     });
   return docs;
 };
@@ -169,19 +186,19 @@ const feedBottomLeft = () => {
   return docs;
 };
 // A brand-new farmer: the tutorial on step 1, beginner's luck
-// unused, an empty plot and 4 candy — one steal from Bob's ripe pumpkin
-// makes the 5 a guard ghost costs.
+// unused, an empty plot and one steal short of a guard ghost — one steal
+// from Bob's ripe pumpkin makes what a guard costs.
 const newbieDocs = (tut = { round: 0, cleared: [], done: false, skipped: false }, over = {}) => {
   const docs = JSON.parse(JSON.stringify(VILLAGE_DOCS));
   Object.assign(docs.farms.u_alice.data, { tutorial: tut, firstCropBoost: false, ...over });
   docs["plots-d1"].u_alice.data.tiles = Array(9).fill(null);
-  docs.players.u_alice.data.candy = 4;
+  docs.players.u_alice.data.candy = RULES.guardCost - RULES.stealAmount;
   return docs;
 };
 // Alice has used every steal and help today.
 const spentDocs = () => {
   const docs = JSON.parse(JSON.stringify(VILLAGE_DOCS));
-  Object.assign(docs.players.u_alice.data, { stealsToday: 20, helpsToday: 10 }); // today's caps
+  Object.assign(docs.players.u_alice.data, { stealsToday: RULES.dailyStealCap, helpsToday: RULES.dailyHelpCap }); // today's caps
   return docs;
 };
 // No season. The same village, every stored time moved to a day
@@ -189,16 +206,16 @@ const spentDocs = () => {
 const LATER = Date.UTC(2027, 2, 3, 4, 0, 0); // 2027-03-03 12:00 Taipei
 const shiftTimes = (docs, ms) =>
   JSON.parse(JSON.stringify(docs), (_k, v) => (typeof v === "string" && /^\d{4}-\d\d-\d\dT/.test(v) ? new Date(Date.parse(v) + ms).toISOString() : v));
-// Bob pinched Alice's ripe Common 5 min ago (and is still in her
-// 10-minute revenge window, from a steal 3 min ago); he was caught on her
-// going-off pumpkin 20 min ago. Someone (u_x) also marked Bob's guarded Rare.
+// Bob pinched Alice's ripe Common 90 s ago (and is still in her revenge
+// window, from a steal a minute ago); he was caught on her going-off
+// pumpkin 3 min ago. Someone (u_x) also marked Bob's guarded Rare.
 const robbedDocs = () => {
   const docs = JSON.parse(JSON.stringify(VILLAGE_DOCS));
   const mine = docs["plots-d1"].u_alice.data.tiles;
-  Object.assign(mine[0], { stolen: 1, stolenBy: ["u_bob"], marks: [{ by: "u_bob", at: at(5 * 60e3) }] });
-  Object.assign(mine[5], { marks: [{ by: "u_bob", at: at(20 * 60e3), caught: true }] });
-  docs["plots-d1"].u_bob.data.tiles[1].marks = [{ by: "u_x", at: at(60 * 60e3) }];
-  docs.players.u_bob.data.events.push({ t: "steal", victim: "u_alice", kind: "common", at: at(3 * 60e3) });
+  Object.assign(mine[0], { stolen: 1, stolenBy: ["u_bob"], marks: [{ by: "u_bob", at: at(90e3) }] });
+  Object.assign(mine[5], { marks: [{ by: "u_bob", at: at(3 * 60e3), caught: true }] });
+  docs["plots-d1"].u_bob.data.tiles[1].marks = [{ by: "u_x", at: at(60e3) }];
+  docs.players.u_bob.data.events.push({ t: "steal", victim: "u_alice", kind: "common", at: at(60e3) });
   return docs;
 };
 // ── fixtures: custom avatars / crop skins as PNG data URLs ──
@@ -253,17 +270,18 @@ const ruled = (docs) => {
   withArt(docs, "u_bob", { skins: BOB_SKIN });
   return docs;
 };
-// Alice with 70 candy, a crop at row 1 col 2 (tile 5) and a 4×4 field to test "off".
+// Alice with enough candy for both steps of field (and 20 over), a crop at
+// row 1 col 2 (tile 5) and a 4×4 field to test "off".
 const richDocs = () => {
   const docs = ruled(JSON.parse(JSON.stringify(VILLAGE_DOCS)));
-  docs.players.u_alice.data.candy = 70;
+  docs.players.u_alice.data.candy = RULES_EXPANSION_COSTS.reduce((a, b) => a + b, 0) + 20;
   return docs;
 };
 const bigDocs = () => {
   const docs = ruled(JSON.parse(JSON.stringify(VILLAGE_DOCS)));
   const old = docs["plots-d1"].u_alice.data.tiles;
   const tiles = Array.from({ length: 16 }, (_, i) => (i % 4 < 3 && i < 12 ? old[Math.floor(i / 4) * 3 + (i % 4)] : null));
-  tiles[15] = tile("common", 0.2 * H); // only on the 4×4 field
+  tiles[15] = tile("common", AGE.growing("common", 0.2)); // only on the 4×4 field
   docs["plots-d1"].u_alice.data = { tiles, cols: 4, rows: 4 };
   return docs;
 };
@@ -311,4 +329,4 @@ const SCENARIOS = {
   signedOut: { now: NOW, me: { player: false, reason: "SIGNED_OUT" }, docs: VILLAGE_DOCS },
 };
 
-export { at, BOB_SKIN, crowd, doc, faceOk, H, NOW, ruled, SCENARIOS, tile, VILLAGE_DOCS, withArt };
+export { AGE, at, BOB_SKIN, crowd, doc, faceOk, H, NOW, ruled, SCENARIOS, tile, VILLAGE_DOCS, withArt };

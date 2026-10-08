@@ -4,20 +4,22 @@
 // change them — only someone who can redeploy the app (VibeHost deployer+).
 //   node village-rules.mjs --village village.json                         show them
 //   node village-rules.mjs --village village.json --set cropSkins=off \
-//        --set expansion.cost=40 --set expansion.maxCols=3                change them
+//        --set expansion.costs=150,400 --set expansion.maxCols=3          change them
 // then rebuild and redeploy (deploy.md). Defaults: everything on.
 //   node village-rules.mjs --url https://<village host>                   read a live village's
 // (what a joiner's Step F uses: which optional questions to ask).
 //   customAvatar   farmers may bring their own 24×24 face (setup link)
-//   expansion      buy a bigger field in game: on, cost (candy a step),
-//                  maxCols / maxRows (3–4 each; 3×3 → 3×4 → 4×4)
+//   expansion      buy a bigger field in game: on, costs (candy for each
+//                  step, the last repeats), maxCols / maxRows (3–4 each;
+//                  3×3 → 3×4 → 4×4)
 //   cropSkins      farmers may re-skin their varieties (cosmetic only)
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+import { EXPANSION_DEFAULTS } from "./template/engine.js";
 
 export const RULE_DEFAULTS = Object.freeze({
   customAvatar: true,
-  expansion: Object.freeze({ on: true, cost: 30, maxCols: 4, maxRows: 4 }),
+  expansion: Object.freeze({ on: true, ...EXPANSION_DEFAULTS }),
   cropSkins: true,
 });
 
@@ -34,6 +36,15 @@ const int = (v, lo, hi, what) => {
   return n;
 };
 
+/** The price of each step: `costs` (a list, or "150,400"), or an older single `cost`. */
+const costsOf = (ex) => {
+  const raw = ex.costs ?? (ex.cost === undefined ? undefined : [ex.cost]);
+  if (raw === undefined) return undefined;
+  const list = Array.isArray(raw) ? raw : String(raw).split(",");
+  if (list.length < 1 || list.length > 2) throw new Error(`expansion.costs takes 1 or 2 prices (3×4, then 4×4), got "${raw}"`);
+  return list.map((v) => int(String(v).trim(), 1, 5000, "expansion.costs"));
+};
+
 /** village.json "rules" (missing = defaults) → the full, checked set. Throws on anything else. */
 export function normalizeRules(raw = {}) {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) throw new Error('"rules" must be an object');
@@ -46,7 +57,7 @@ export function normalizeRules(raw = {}) {
     customAvatar: bool(raw.customAvatar, "customAvatar") ?? RULE_DEFAULTS.customAvatar,
     expansion: {
       on: bool(ex.on, "expansion") ?? d.on,
-      cost: ex.cost === undefined ? d.cost : int(ex.cost, 1, 500, "expansion.cost"),
+      costs: costsOf(ex) ?? [...d.costs],
       // The farm's layout holds at most 4×4 on a 390 px phone.
       maxCols: ex.maxCols === undefined ? d.maxCols : int(ex.maxCols, 3, 4, "expansion.maxCols"),
       maxRows: ex.maxRows === undefined ? d.maxRows : int(ex.maxRows, 3, 4, "expansion.maxRows"),
@@ -62,7 +73,8 @@ export function setRules(raw, edits) {
     const m = /^([a-zA-Z]+)(?:\.([a-zA-Z]+))?=(.+)$/.exec(e);
     if (!m) throw new Error(`--set takes rule=value or expansion.field=value, got "${e}"`);
     const [, top, sub, v] = m;
-    if (top === "expansion" && sub) r.expansion[sub] = v;
+    if (top === "expansion" && sub === "cost") r.expansion.costs = [v]; // older name: one price for every step
+    else if (top === "expansion" && sub) r.expansion[sub] = v;
     else if (top === "expansion") r.expansion.on = v;
     else r[top] = v;
   }
@@ -100,7 +112,7 @@ if (runAsCommand) {
     console.log(
       `${edits.length ? "Saved" : "Village rules"} (${url ?? file}):\n` +
         `  custom avatars  ${on(rules.customAvatar)}\n` +
-        `  farm expansion  ${on(rules.expansion.on)}${rules.expansion.on ? ` — ${rules.expansion.cost} candy a step, up to ${rules.expansion.maxCols}×${rules.expansion.maxRows}` : ""}\n` +
+        `  farm expansion  ${on(rules.expansion.on)}${rules.expansion.on ? ` — ${rules.expansion.costs.join(" then ")} candy, up to ${rules.expansion.maxCols}×${rules.expansion.maxRows}` : ""}\n` +
         `  crop skins      ${on(rules.cropSkins)}` +
         (edits.length ? "\nRebuild and redeploy for the village to use them (deploy.md)." : ""),
     );

@@ -6,7 +6,7 @@
 //   build.mjs --mock  ships this file in the try-out site instead of the
 //              real SDK. With no scenario it runs "try-out mode": the store
 //              lives in localStorage, the clock runs ?speed= times faster
-//              (default from the build, 60 → a 30 min Common takes 30 s), and
+//              (default from the build, 1: real time — a Common ripens in a minute), and
 //              four pretend neighbours — Bob, Cleo, Dan and Eve — each on
 //              their own link with a house on the village map, tend their
 //              farms, post guard ghosts, clear rot and sometimes steal from
@@ -69,7 +69,15 @@
   var SHARED = /*@shared*/null;
   var SCARECROWS = SHARED.scarecrows;
   var G = SHARED.growMs;
-  var STORE_VERSION = 4; // 2 = plots per district; 3 = seeded feed events; 4 = a fresh farmer in the tutorial
+  var SEC = 1000;
+  // Ages (how long ago a crop was planted) for each state, from the rules.
+  var AGE = {
+    ripeOpen: function (k) { return G[k] + SHARED.stealOpensMs + 10 * SEC; }, // ripe, stealable, fresh
+    growing: function (k, f) { return G[k] * f; }, // f of the way to ripe
+    off: function (k) { return G[k] + 1.2 * SHARED.goingOffFactor * G[k]; }, // going off (half value)
+    rotten: function (k) { return G[k] + 2 * SHARED.goingOffFactor * G[k] + 30 * SEC; },
+  };
+  var STORE_VERSION = 5; // 2 = plots per district; 3 = seeded feed events; 4 = a fresh farmer in the tutorial; 5 = fast mode (1-minute Commons)
   var LOTS = SHARED.lots;
   var clone = function (o) { return JSON.parse(JSON.stringify(o)); };
 
@@ -77,7 +85,7 @@
   if (tryout) {
     var q = new URLSearchParams(g.location.search);
     var asked = Number(q.get("speed"));
-    var speed = asked > 0 && asked <= 3600 ? asked : MOCK.speed || 60;
+    var speed = asked > 0 && asked <= 3600 ? asked : MOCK.speed || 1;
     try { state = JSON.parse(g.localStorage.getItem(KEY)); } catch (e) { state = null; }
     var real = Date.now();
     // ?farmers= picks the village size and sticks until asked again; a store
@@ -131,17 +139,17 @@
     // neighbours', each in a different state so the map has something to say.
     var DAY = 24 * H;
     var doc = function (owner, data, joinedDaysAgo) { return { owner: owner, version: 1, data: data, createdAt: at((joinedDaysAgo || 0) * DAY) }; };
-    // Ages for today's pace: Common 30 min, Rare 2 h, Legendary 6 h; steals
-    // open 15 min after ripe; going off 2 h (Legendary 6 h), rotten twice that.
+    // Ages by intent (ripe and open, growing, going off, rotten), from
+    // engine.js's RULES, so the seed village follows whatever pace it sets.
     var PLOTS = {
       // 🎃 ripe & stealable right now (and still fresh)
-      u_bob: [tile("common", 0.9 * H), tile("rare", 2.6 * H), tile("common", 0.25 * H), null, tile("legendary", 3 * H), null, tile("common", 0.4 * H), null, null],
+      u_bob: [tile("common", AGE.ripeOpen("common")), tile("rare", AGE.ripeOpen("rare") + 20 * SEC), tile("common", AGE.growing("common", 0.4)), null, tile("legendary", AGE.growing("legendary", 0.4)), null, tile("common", AGE.growing("common", 0.7)), null, null],
       // 👻 a guard ghost on her ripest (and one unguarded ripe common)
-      u_cleo: [tile("legendary", 6.6 * H, { guardSince: at(10 * MIN) }), tile("common", 1 * H), tile("rare", 1 * H), tile("rare", 0.3 * H), null, tile("common", 0.1 * H), null, tile("legendary", 3 * H), null],
+      u_cleo: [tile("legendary", AGE.ripeOpen("legendary"), { guardSince: at(SHARED.guardLastsMs / 2) }), tile("common", AGE.ripeOpen("common")), tile("rare", AGE.growing("rare", 0.5)), tile("rare", AGE.growing("rare", 0.15)), null, tile("common", AGE.growing("common", 0.3)), null, tile("legendary", AGE.growing("legendary", 0.3)), null],
       // nothing ripe yet: a field of sprouts
-      u_dan: [tile("common", 0.1 * H), tile("common", 0.05 * H), tile("rare", 0.3 * H), tile("common", 0.15 * H), tile("legendary", 1 * H), tile("common", 0.02 * H), tile("rare", 0.5 * H), tile("common", 0.2 * H), null],
-      // a rotten pumpkin (ripe 5 h ago) and one going off (a Rare ripe 2½ h ago)
-      u_eve: [tile("common", G.common + 5 * H), tile("rare", G.rare + 2.5 * H), null, tile("common", 0.25 * H), null, null, tile("rare", 1 * H), null, null],
+      u_dan: [tile("common", AGE.growing("common", 0.2)), tile("common", AGE.growing("common", 0.1)), tile("rare", AGE.growing("rare", 0.15)), tile("common", AGE.growing("common", 0.3)), tile("legendary", AGE.growing("legendary", 0.07)), tile("common", AGE.growing("common", 0.05)), tile("rare", AGE.growing("rare", 0.1)), tile("common", AGE.growing("common", 0.4)), null],
+      // a rotten pumpkin and one going off (a Rare)
+      u_eve: [tile("common", AGE.rotten("common")), tile("rare", AGE.off("rare")), null, tile("common", AGE.growing("common", 0.25)), null, null, tile("rare", AGE.growing("rare", 0.2)), null, null],
     };
     // "Lately in the village" has something to say from the start: what the
     // neighbours got up to in the last hour (on their player docs, like the
@@ -179,7 +187,7 @@
       NEIGHBOURS.push(x);
       var joinedX = 1 - (k - 4) / (farmers + 1); // after Eve, in order
       // Every third one has a ripe pumpkin to steal; the rest are growing.
-      var tilesX = [tile("common", (k % 3 === 0 ? 0.9 : 0.2) * H), null, tile("rare", (0.5 + 0.5 * (k % 4)) * H), null, null, null, null, null, null];
+      var tilesX = [tile("common", k % 3 === 0 ? AGE.ripeOpen("common") : AGE.growing("common", 0.2)), null, tile("rare", AGE.growing("rare", 0.1 + 0.2 * (k % 4))), null, null, null, null, null, null];
       settle(id, k, { name: x.farm, slug: x.slug, avatar: x.avatar, scarecrow: x.scarecrow }, joinedX, tilesX);
       docs.players[id] = doc(id, { name: nm, avatar: x.avatar - 1, candy: x.candy, steals: 0, helps: 0, day: "", stealsToday: 0, helpsToday: 0, events: [] }, joinedX);
     }
@@ -337,7 +345,7 @@
       if (!tile) continue;
       var st = E.tileState(tile, t);
       // They're slow: ripe crops sit for three times the steal window
-      // (45 game-min, about 45 s at 60×) — 30 game-min past it opening. Steal them!
+      // (90 s at today's pace) — a minute past it opening. Steal them!
       if (keen && st.stage === "rotten" && (r = attempt(function () { return E.clearRotten({ plot: plot, i: i, now: t }); }))) { plot = r.plot; mine = true; }
       else if (keen && st.stage === "ripe" && t - st.ripeAt > 3 * E.RULES.stealOpensAfterMs && (r = attempt(function () { return E.harvest({ player: them, plot: plot, i: i, now: t }); }))) { plot = r.plot; them = r.player; mine = true; }
       else if (st.haunted && them.candy >= 2 && Math.random() < 0.3 && (r = attempt(function () { return E.chaseOwnGhost({ player: them, plot: plot, i: i, now: t }); }))) { plot = r.plot; them = r.player; mine = true; }
@@ -404,9 +412,8 @@
           reason: state.me.reason,
           user: state.me.user || null,
           serverTime: iso(),
-          // The page re-renders this often: at 60× a minute of game time
-          // passes every second, so a 20 s cadence would make timers jump.
-          tickMs: state.clock.speed > 1 ? 1000 : undefined,
+          // How fast the try-out's clock runs (1 = real time; ?speed= changes it).
+          speed: state.clock.speed,
           now: function () { return new Date(now()); },
         };
         for (var k in api) vh[k] = api[k];

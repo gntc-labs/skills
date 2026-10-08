@@ -4,11 +4,11 @@ import * as E from "../engine.js";
 import * as FX from "../fx.js";
 import { seqRand } from "../actions.js";
 import { inside } from "../clicks.js";
-import { $, A, durText, firstVisible, iconHtml, now, state, toast } from "../core.js";
+import { $, A, firstVisible, iconHtml, now, pct, state, toast } from "../core.js";
 import { meP, mine, updateMyFarm } from "../data.js";
 import { farmOf } from "../farms.js";
 import { render } from "../render.js";
-import { TUTORIAL_STEPS } from "../shared.js";
+import { durText, TUTORIAL_STEPS } from "../shared.js";
 import { freshTutorial, mergeTutorial } from "../sync.js";
 import { ripeAndStealable } from "./map.js";
 
@@ -61,9 +61,9 @@ const practiceRowHtml = () =>
   `<p class="practice-row"><a class="btn practice-go" href="/farm/${PRACTICE_SLUG}"><img class="ico" alt="" src="${A("props/scarecrow.png")}" width="24" height="24"> Practice Patch — try a pinch</a><small>Only you see it, and only in the tour. Nothing there counts.</small></p>`;
 // What each step says; their order (and numbers) come from TUTORIAL_STEPS.
 const TUTORIAL_TEXT = {
-  plant: { text: "Tap to plant a free Common pumpkin." },
+  plant: { text: `Tap to plant a free Common pumpkin. Tap it again to water it: ${pct(E.RULES.helpBoost)}% sooner.` },
   village: { text: "Your neighbours live here. {pumpkin} over a house means something is ripe to pinch.", ok: true },
-  steal: { text: "Tap to pinch 1 {candy}. 30% chance a ghost catches you." },
+  steal: { text: `Tap to pinch ${E.RULES.stealAmount} {candy}. ${pct(1 - E.RULES.stealSuccessChance)}% chance a ghost catches you.` },
   guard: { text: "Hide a guard ghost on your pumpkin. Thieves who step on it get a BOO!" },
   harvest: { text: `Tap to harvest. Leave it ${durText(E.goingOffAfter("common"))} and it starts going off.` },
 };

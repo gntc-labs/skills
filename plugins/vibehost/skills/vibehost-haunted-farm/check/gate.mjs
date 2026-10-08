@@ -4,9 +4,10 @@
 // name and tagline, setting up a farm, a spectator, a resting village, what
 // the build ships — and, for a try-out build, the try-out itself. It writes
 // the three screenshots SKILL.md opens: phone-map, desktop-map, phone-bob-farm.
-import { SCENARIOS } from "./fixtures.mjs";
-import { BASE, browser, CFG, check, DESKTOP, FONTS, guarded, ICON_TEXT, IS_MOCK, layout, layoutOk, open, PHONE, pngsSettled, pullSteal, ready, scan, serveFont, shot, shots, sideways, site, SKILL_DIR, STEAL, viewShot } from "./harness.mjs";
-import { existsSync, readFileSync } from "node:fs";
+import { RULES } from "../template/engine.js";
+import { SCENARIOS, VILLAGE_DOCS } from "./fixtures.mjs";
+import { BASE, browser, CFG, check, DESKTOP, FONTS, FORCE_TRICK, guarded, ICON_TEXT, IS_MOCK, layout, layoutOk, open, PHONE, pngsSettled, pullSteal, ready, scan, serveFont, shot, shots, sideways, site, SKILL_DIR, STEAL, tap, viewShot } from "./harness.mjs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 export default async function gate() {
@@ -190,6 +191,111 @@ export default async function gate() {
     check("a steal is Trick or Treat and counts toward today's cap", (treat || trick) && after.alice.stealsToday === 3 && errors.length === 0, { after, treat, trick, errors });
   });
 
+  await guarded("watering my own growing crop: 25% sooner, no candy, counts toward today's helps — once per crop, then nothing left to tap", async (ref) => {
+    const { page, ctx, errors } = await open(PHONE, SCENARIOS.play, "/farm/alice");
+    ref.ctx = ctx;
+    await ready(page);
+    const read = () =>
+      page.evaluate(() => ({
+        version: window.__HF_STORE.players.u_alice.version,
+        candy: window.__HF_STORE.players.u_alice.data.candy,
+        helps: window.__HF_STORE.players.u_alice.data.helpsToday,
+        tile: window.__HF_STORE["plots-d1"].u_alice.data.tiles[7],
+      }));
+    const before = await read();
+    const label = await page.getAttribute('.farm.me button.tile[data-act="water"][data-i="7"]', "title");
+    await tap(page, '.farm.me button.tile[data-act="water"][data-i="7"]');
+    await page.waitForFunction((v) => window.__HF_STORE.players.u_alice.version > v, before.version, { timeout: 5000 });
+    const after = await read();
+    // Once per crop: the tile is plain soil now, and another tap says no.
+    const again = await page.evaluate(() => ({
+      button: !!document.querySelector('.farm.me button.tile[data-i="7"]'),
+      div: !!document.querySelector('.farm.me .grid > div.tile[data-i="7"]'),
+    }));
+    await tap(page, '.farm.me .grid > div.tile[data-i="7"]');
+    await page.waitForTimeout(300);
+    const later = await read();
+    const boost = Math.round(RULES.helpBoost * after.tile.growMs);
+    check(
+      "watering my own growing crop: 25% sooner, no candy, counts toward today's helps — once per crop, then nothing left to tap",
+      label === `Water it (${Math.round(RULES.helpBoost * 100)}% sooner)` &&
+        after.tile.helpedBy.includes("u_alice") &&
+        Math.round(after.tile.boostMs - before.tile.boostMs) === boost &&
+        after.candy === before.candy &&
+        after.helps === before.helps + 1 &&
+        !again.button &&
+        again.div &&
+        later.version === after.version &&
+        errors.length === 0,
+      { label, before, after, again, later: later.version, errors },
+    );
+  });
+
+  await guarded("caught: \"Keep sneaking\" closes the card and keeps me on Bob's farm; the ghost still followed me home", async (ref) => {
+    const { page, ctx, errors } = await open(PHONE, SCENARIOS.play, "/farm/bob", { init: [[FORCE_TRICK]] });
+    ref.ctx = ctx;
+    await ready(page);
+    const ghosts = () => page.evaluate(() => window.__HF_STORE["plots-d1"].u_alice.data.tiles.filter((t) => t && t.ghostSince).length);
+    const had = await ghosts();
+    await tap(page, STEAL("u_bob", 0));
+    await page.waitForSelector("dialog#trick[open]", { timeout: 5000 });
+    await page.waitForTimeout(250);
+    const buttons = await page.$$eval("#trick .trick-btns .btn", (bs) => bs.map((b) => b.textContent).join("|"));
+    const focused = await page.evaluate(() => document.activeElement?.id);
+    await viewShot(page, "caught-modal.png");
+    // A mark on this page: a navigation home (after the ghost's flight) would wipe it.
+    await page.evaluate(() => (window.__stayed = true));
+    await page.click("#trick-stay");
+    await page.waitForSelector("dialog#trick:not([open])", { state: "attached", timeout: 3000 });
+    await page.waitForTimeout(3000);
+    await ready(page);
+    const stay = await page.evaluate(() => ({ same: window.__stayed === true, url: location.pathname, farm: document.querySelector(".farm")?.dataset.owner, view: document.body.dataset.view }));
+    const now = await ghosts();
+    check(
+      "caught: \"Keep sneaking\" closes the card and keeps me on Bob's farm; the ghost still followed me home",
+      buttons === "Keep sneaking|Back to my farm" && focused === "trick-stay" && stay.same && stay.url === "/farm/bob" && stay.farm === "u_bob" && stay.view === "neighbour" && now === had + 1 && errors.length === 0,
+      { buttons, focused, stay, had, now, errors },
+    );
+  });
+
+  await guarded("tab title: \"🎃 Ready! · <village>\" while one of my crops is ripe (on any page); just the village name when none is", async (ref) => {
+    const ready_ = `\u{1F383} Ready! · ${CFG.name}`;
+    const { page, ctx, errors } = await open(PHONE, SCENARIOS.play, "/farm/alice");
+    ref.ctx = ctx;
+    await ready(page);
+    const titles = { mine: await page.title() };
+    await viewShot(page, "tab-title-ready.png");
+    await Promise.all([page.waitForURL(`${BASE}farm/bob`), page.goto(`${BASE}farm/bob`)]);
+    await ready(page);
+    titles.bob = await page.title();
+    await ctx.close();
+    // Nothing of mine ripe (the ripe and going-off pumpkins gone).
+    const docs = JSON.parse(JSON.stringify(VILLAGE_DOCS));
+    const mine = docs["plots-d1"].u_alice.data.tiles;
+    mine[0] = mine[5] = null;
+    const n = await open(PHONE, { ...SCENARIOS.play, docs }, "/farm/alice");
+    ref.ctx = n.ctx;
+    await ready(n.page);
+    titles.none = await n.page.title();
+    // Harvesting the last ripe one turns it back.
+    const one = JSON.parse(JSON.stringify(VILLAGE_DOCS));
+    one["plots-d1"].u_alice.data.tiles[5] = null;
+    await n.ctx.close();
+    const h = await open(PHONE, { ...SCENARIOS.play, docs: one }, "/farm/alice");
+    ref.ctx = h.ctx;
+    await ready(h.page);
+    titles.beforeHarvest = await h.page.title();
+    await tap(h.page, '.farm.me button.tile[data-act="harvest"][data-i="0"]');
+    await h.page.waitForFunction((name) => document.title === name, CFG.name, { timeout: 5000 }).catch(() => {});
+    titles.afterHarvest = await h.page.title();
+    writeFileSync(join(shots, "tab-title.txt"), Object.entries(titles).map(([k, v]) => `${k}: ${v}`).join("\n") + "\n");
+    check(
+      "tab title: \"🎃 Ready! · <village>\" while one of my crops is ripe (on any page); just the village name when none is",
+      titles.mine === ready_ && titles.bob === ready_ && titles.none === CFG.name && titles.beforeHarvest === ready_ && titles.afterHarvest === CFG.name && errors.length === 0 && n.errors.length === 0 && h.errors.length === 0,
+      { titles, want: ready_ },
+    );
+  });
+
   await guarded("phone map fits the width: as wide as the content, 16:9, no horizontal overflow or panning anywhere", async (ref) => {
     const { page, ctx, errors } = await open(PHONE, SCENARIOS.crowd);
     ref.ctx = ctx;
@@ -343,22 +449,46 @@ export default async function gate() {
     );
   });
 
-  await guarded("spectator: the map read-only (no invites); a farm link is read-only; Play (first tap) goes to how-to-play", async (ref) => {
+  const SPECTATOR = "spectator, not a member: the map read-only (no invites), a farm link read-only; the banner says only the workspace's members can farm, and 'How to join' opens how-to-play's join card";
+  await guarded(SPECTATOR, async (ref) => {
     const { page, ctx, errors } = await open(PHONE, SCENARIOS.notMember);
     ref.ctx = ctx;
     await ready(page);
-    const ro = await page.evaluate(() => ({ mode: document.body.dataset.mode, links: document.querySelectorAll(".map a.house").length, invites: document.querySelectorAll(".map a.lot").length, buttons: document.querySelectorAll("button.tile").length, banner: document.getElementById("banner").textContent }));
+    const ro = await page.evaluate(() => ({ mode: document.body.dataset.mode, links: document.querySelectorAll(".map a.house").length, invites: document.querySelectorAll(".map a.lot").length, buttons: document.querySelectorAll("button.tile").length, banner: document.getElementById("banner").textContent.trim(), join: document.querySelector("#how-to-join")?.getAttribute("href") }));
     await shot(page, "phone-village-spectator.png");
+    await page.locator("#banner").screenshot({ path: join(shots, "banner-not-member.png") });
     const stayed = page.url() === BASE;
     await page.goto(`${BASE}farm/bob`);
     await ready(page);
     const farm = await page.evaluate(() => ({ farms: document.querySelectorAll(".farm").length, buttons: document.querySelectorAll("button.tile").length }));
-    await page.click("#play");
-    await page.waitForURL(/how-to-play\.html\?reason=NOT_MEMBER/, { timeout: 5000 });
+    await page.click("#how-to-join");
+    await page.waitForURL(/how-to-play\.html\?reason=NOT_MEMBER#join/, { timeout: 5000 });
+    await page.waitForFunction(() => document.body.dataset.reason === "NOT_MEMBER", null, { timeout: 5000 });
+    const card = await page.evaluate(() => {
+      const c = document.getElementById("join");
+      return { shown: !!c && getComputedStyle(c).display !== "none", lead: c?.querySelector("h2")?.textContent, second: c?.querySelector(".own-village h3")?.textContent };
+    });
+    await page.locator("#join").screenshot({ path: join(shots, "how-to-play-join.png") });
     check(
-      "spectator: the map read-only (no invites); a farm link is read-only; Play (first tap) goes to how-to-play",
-      ro.mode === "watch" && ro.links === 2 && ro.invites === 0 && ro.buttons === 0 && /another team/.test(ro.banner) && stayed && farm.farms === 1 && farm.buttons === 0 && errors.length === 0,
-      { ro, stayed, farm, errors },
+      SPECTATOR,
+      ro.mode === "watch" && ro.links === 2 && ro.invites === 0 && ro.buttons === 0 &&
+        ro.banner.startsWith("You can look around, but only members of this village's VibeHost workspace can farm here.") && /How to join$/.test(ro.banner) &&
+        stayed && farm.farms === 1 && farm.buttons === 0 && card.shown && card.lead === "Join this village" && card.second === "Or start your own village" && errors.length === 0,
+      { ro, stayed, farm, card, errors },
+    );
+  });
+
+  const SIGNED_OUT = "spectator, signed out: the banner asks to sign in, and 'Sign in' goes to the platform login, coming back to this page";
+  await guarded(SIGNED_OUT, async (ref) => {
+    const { page, ctx, errors } = await open(PHONE, SCENARIOS.signedOut, "farm/bob");
+    ref.ctx = ctx;
+    await ready(page);
+    const b = await page.evaluate(() => ({ banner: document.getElementById("banner").textContent.trim(), href: document.querySelector("#sign-in")?.getAttribute("href"), here: location.href }));
+    await page.locator("#banner").screenshot({ path: join(shots, "banner-signed-out.png") });
+    check(
+      SIGNED_OUT,
+      b.banner === "Sign in to farm in this village. Sign in" && b.href === `${CFG.loginUrl}?next=${encodeURIComponent(b.here)}` && errors.length === 0,
+      { b, errors },
     );
   });
 
@@ -477,23 +607,23 @@ export default async function gate() {
           perRealSecond: (vh.now().getTime() - a) / 1000,
         };
       });
-      // Bob leaves a ripe pumpkin for three steal windows (45 game-min) before he harvests it.
-      const bobWaits = await page.evaluate(async () => {
+      // Bob leaves a ripe pumpkin for three steal windows before he harvests it.
+      const waitMs = 3 * RULES.stealOpensAfterMs;
+      const bobWaits = await page.evaluate(async ({ growMs, before, after }) => {
         await new Promise((r) => { const w = () => (window.__HF_NEIGHBOUR_TICK ? r() : setTimeout(w, 50)); w(); });
         const store = window.__HF_STORE;
         const plotsKey = Object.keys(store).find((k) => k.startsWith("plots-d") && store[k].u_bob);
-        const at = (minAgo) => {
+        const at = (agoMs) => {
           const t = window.__hauntedFarm.vh.now().getTime();
-          const growMs = 30 * 60e3;
-          const plantedAt = new Date(t - growMs - minAgo * 60e3).toISOString();
+          const plantedAt = new Date(t - growMs - agoMs).toISOString();
           store[plotsKey].u_bob.data.tiles[0] = { kind: "common", secret: false, plantedAt, growMs, boostMs: 0, ghostSince: null, ghostMs: 0, stolen: 0, stolenBy: [], helpedBy: [] };
           window.__HF_NEIGHBOUR_TICK("u_bob");
           // Still that pumpkin? (Once harvested, he may sow a new seed in the same spot.)
           return store[plotsKey].u_bob.data.tiles[0]?.plantedAt === plantedAt;
         };
-        return { at40: at(40), at46: at(46) };
-      });
-      check("try-out: Bob harvests a ripe pumpkin only after three steal windows (still there 40 game-min after ripening, gone after 46)", bobWaits.at40 && !bobWaits.at46, { bobWaits });
+        return { before: at(before), after: at(after) };
+      }, { growMs: RULES.kinds.common.growMs, before: waitMs - 10_000, after: waitMs + 10_000 });
+      check(`try-out: Bob harvests a ripe pumpkin only after three steal windows (still there ${(waitMs - 10_000) / 1000} s after ripening, gone after ${(waitMs + 10_000) / 1000} s)`, bobWaits.before && !bobWaits.after, { bobWaits });
       await page.screenshot({ path: join(shots, "phone-tryout.png") });
       const tryTut = await page.evaluate(() => ({ step: document.getElementById("coach").dataset.step, shown: !document.getElementById("coach").hidden, farm: window.__HF_STORE.farms.u_you.data }));
       check(
@@ -526,9 +656,9 @@ export default async function gate() {
         return b && { text: window.__iconText(b).replace(/\s+/g, " ").trim(), next: b.dataset.next };
       });
       check(
-        "try-out: my farmer has a custom face, Bob's Common pumpkins wear a crop skin, and my farm offers 'Expand field — 30 candy'",
+        `try-out: my farmer has a custom face, Bob's Common pumpkins wear a crop skin, and my farm offers 'Expand field — ${CFG.rules.expansion.costs[0]} candy'`,
         /^data:image\/png;base64,/.test(myFace) && bobCommons.some((x) => /^data:image\/png;base64,/.test(x)) && bobCommons.some((x) => /crops\/(rare|legendary)-/.test(x)) &&
-          expandBtn?.text === "Expand field — 30 [candy]" && expandBtn.next === "3x4" && errors.length === 0,
+          expandBtn?.text === `Expand field — ${CFG.rules.expansion.costs[0]} [candy]` && expandBtn.next === "3x4" && errors.length === 0,
         { myFace: myFace.slice(0, 30), bobCommons: bobCommons.map((x) => x.slice(0, 30)), expandBtn, errors },
       );
 
@@ -575,8 +705,19 @@ export default async function gate() {
       await dp.goto(BASE);
       await ready(dp);
       await shot(dp, "desktop-tryout.png");
+      // Real time by default: the tips say midnight, nothing about game time;
+      // sped up with ?speed=, they say the reset comes in game time.
       const tryTip = await dp.$eval('#hud [data-chip="steals"]', (c) => c.dataset.tip);
-      check("try-out: the counters' tips say they reset in game time (which runs fast here)", /Resets at midnight Taipei time — in game time, which runs fast in this try-out\./.test(tryTip), { tryTip });
+      await dp.goto(`${BASE}?speed=60`);
+      await ready(dp);
+      const fastTip = await dp.$eval('#hud [data-chip="steals"]', (c) => c.dataset.tip);
+      await dp.goto(BASE);
+      await ready(dp);
+      check(
+        "try-out: at its default 1× the counters' tips say they reset at midnight; sped up with ?speed=, in game time (which runs fast)",
+        /Resets at midnight Taipei time\.$/.test(tryTip) && /Resets at midnight Taipei time — in game time, which runs fast in this try-out\./.test(fastTip),
+        { tryTip, fastTip },
+      );
       await dp.click("#feed-bar");
       const seeded = await dp.$$eval("#feed-drop li", (lis) => lis.map((li) => li.textContent.replace(/\s+/g, " ").trim()));
       check(

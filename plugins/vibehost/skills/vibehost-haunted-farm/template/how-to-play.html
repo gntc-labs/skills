@@ -41,6 +41,9 @@
   .hero img { width: 72px; height: 72px; flex: none; }
   .btn { font-size: 23px; line-height: 1.2; cursor: pointer; color: var(--void); background: var(--amber); border: 3px solid var(--void); padding: 6px 14px; box-shadow: 3px 3px 0 var(--void); text-decoration: none; display: inline-block; margin: 4px 8px 0 0; }
   .btn.ghost { background: var(--bone); }
+  /* Joining comes first; your own village is the smaller second choice. */
+  .own-village { margin-top: 18px; padding-top: 12px; border-top: 2px dashed var(--dusk); font-size: 14px; }
+  .own-village h3 { margin: 0 0 6px; font: 400 24px/1.1 "Jersey 10", ui-monospace, monospace; color: var(--candle); }
   code { display: block; white-space: pre-wrap; word-break: break-word; background: var(--night); border: 2px solid var(--dusk); padding: 8px 10px; margin: 6px 0 10px; color: var(--spirit); font: 15px/1.4 ui-monospace, monospace; }
   section[data-reason] { display: none; }
   body[data-reason="SIGNED_OUT"] section[data-reason~="SIGNED_OUT"],
@@ -77,15 +80,18 @@
     <a class="btn ghost" href="/">Keep watching</a>
   </section>
 
-  <section class="card why" data-reason="NOT_MEMBER">
+  <section class="card why" id="join" data-reason="NOT_MEMBER">
     <div class="hero"><img alt="" data-art="avatars/farmer-4.png"><div>
-      <h2>This village belongs to another team</h2>
-      <p>Only its team can farm here — but you can grow your own. Want one?</p>
+      <h2>Join this village</h2>
+      <p>Ask someone in the village to add you to their VibeHost workspace. Got an invite email? Accept it. On a company email, signing in may be enough.</p>
     </div></div>
-    <p>Ask your coding agent — Claude Code or Codex — in one line:</p>
-    <code id="install"></code>
-    <a class="btn" id="own" href="https://vibehost.com">Get started on VibeHost</a>
-    <a class="btn ghost" href="/">Back to the village</a>
+    <a class="btn" href="/">Back to the village</a>
+    <div class="own-village">
+      <h3>Or start your own village</h3>
+      <p>Ask your coding agent — Claude Code or Codex — in one line:</p>
+      <code id="install"></code>
+      <a class="btn ghost" id="own" href="https://vibehost.com">Get started on VibeHost</a>
+    </div>
   </section>
 
   <section class="card why" data-reason="PASSWORD_REQUIRED">
@@ -132,7 +138,9 @@
     var rules = c.rules || { expansion: { on: true, cost: 30, maxCols: 4, maxRows: 4 }, customAvatar: true, cropSkins: true };
     var on = { expansion: rules.expansion.on, customAvatar: rules.customAvatar, cropSkins: rules.cropSkins };
     [].forEach.call(document.querySelectorAll("[data-rule]"), function (el) { if (!on[el.getAttribute("data-rule")]) el.parentNode.removeChild(el); });
-    [].forEach.call(document.querySelectorAll('[data-fill="cost"]'), function (el) { el.textContent = rules.expansion.cost; });
+    var costs = rules.expansion.costs || [rules.expansion.cost]; // an older single price
+    [].forEach.call(document.querySelectorAll('[data-fill="costs"]'), function (el) { el.textContent = costs.join(", then "); });
+    [].forEach.call(document.querySelectorAll('[data-fill="costs-short"]'), function (el) { el.textContent = costs.join(" / "); });
     [].forEach.call(document.querySelectorAll('[data-fill="max"]'), function (el) { el.textContent = rules.expansion.maxCols + "×" + rules.expansion.maxRows; });
     var village = new URL("/", location.href).href;
     document.getElementById("login").href = c.loginUrl + (c.loginUrl.indexOf("?") === -1 ? "?" : "&") + "next=" + encodeURIComponent(village);

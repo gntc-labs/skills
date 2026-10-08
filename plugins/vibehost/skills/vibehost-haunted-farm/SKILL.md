@@ -90,14 +90,14 @@ A **join** ends here (plus §3's invite line if they're the only farmer). Never 
 
 ## Changing the village rules (deployers only)
 
-The rules — custom avatars, farm expansion (30 candy a step, 3×3 → 3×4 → 4×4) and crop skins, all on by default — are baked into the page from `village.json`. Only someone who can redeploy the app can change them:
-1. `node <skill-dir>/village-rules.mjs --village village.json` shows them; `--set cropSkins=off`, `--set expansion=off`, `--set expansion.cost=40`, `--set expansion.maxCols=3` change them.
+The rules — custom avatars, farm expansion (3×3 → 3×4 for 150 candy → 4×4 for 400) and crop skins, all on by default — are baked into the page from `village.json`. Only someone who can redeploy the app can change them:
+1. `node <skill-dir>/village-rules.mjs --village village.json` shows them; `--set cropSkins=off`, `--set expansion=off`, `--set expansion.costs=100,300`, `--set expansion.maxCols=3` change them.
 2. Rebuild with the same flags and redeploy (`deploy.md` §2). A rule turned off hides its button, setup questions and How to play card; stored art stays but isn't shown; a bought field shows as 3×3.
 3. Can't deploy the app? Say so: a deployer has to do it.
 
 ## Try-out build (only when asked)
 
-Where App Data isn't on yet ("The village is resting"), a **single-player try-out**: `build.mjs … --mock` (optional `--speed N`, default 60, so a 30 min Common takes 30 s; `?speed=` overrides). Everything stays in that browser; the neighbours (Bob, Cleo, Dan, Eve) are pretend and a banner says so, with Reset. `?farmers=20` tries three districts. Never ship `--mock` as the real village, and say teammates can't play together on it.
+Where App Data isn't on yet ("The village is resting"), a **single-player try-out**: `build.mjs … --mock` (real time by default, like the village: a Common ripens in a minute; `--speed N` or `?speed=` runs the clock N times faster). Everything stays in that browser; the neighbours (Bob, Cleo, Dan, Eve) are pretend and a banner says so, with Reset. `?farmers=20` tries three districts. Never ship `--mock` as the real village, and say teammates can't play together on it.
 
 ## What you cannot promise
 

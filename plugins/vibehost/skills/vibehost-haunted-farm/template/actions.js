@@ -79,7 +79,7 @@ const ACTIONS = {
       await write("plots", owner, plotOut(r.victimPlot, at));
       await write("players", state.meId, playerOut(r.thief, at));
       if (r.risk.guarded) reveal(owner, i, state.plots.get(owner).plot.tiles[i]);
-      return { fx: "treat", guarded: r.risk.guarded, say: `Treat! +1 candy from ${farmName(owner)}.` };
+      return { fx: "treat", guarded: r.risk.guarded, say: `Treat! +${E.RULES.stealAmount} candy from ${farmName(owner)}.` };
     }
     await write("plots", state.meId, plotOut(r.thiefPlot, at)); // the ghost lands first (can refuse)
     await write("players", state.meId, playerOut(r.thief, at)); // then the attempt counts: always applies
@@ -108,10 +108,13 @@ const ACTIONS = {
     return { fx: "none" };
   },
   async water(owner, i) {
-    return helpAction(owner, i, "water", "Watered! +1 candy for being kind.", "water");
+    const sooner = `${Math.round(E.RULES.helpBoost * 100)}% sooner`;
+    return owner === state.meId
+      ? helpAction(owner, i, "water", `Watered! It ripens ${sooner}.`, "water")
+      : helpAction(owner, i, "water", `Watered! It ripens ${sooner}, and +${E.RULES.helpReward} candy for being kind.`, "water");
   },
   async chaseHelp(owner, i) {
-    return helpAction(owner, i, "chase", "You chased the ghost away. +1 candy.", "ghost");
+    return helpAction(owner, i, "chase", `You chased the ghost away. +${E.RULES.helpReward} candy.`, "ghost");
   },
 };
 

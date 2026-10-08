@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Builds the static village site from a rolled village.
-//   node build.mjs --village village.json --out site/ [--url https://<live host>] [--workspace <slug>] [--mock [--speed 60]] [--playwright <path>]
+//   node build.mjs --village village.json --out site/ [--url https://<live host>] [--workspace <slug>] [--mock [--speed 1]] [--playwright <path>]
 // Output (exactly what gets deployed):
 //   site/index.html         the village (config injected as <script id="village">)
 //   site/how-to-play.html   the explainer for visitors who can't play
@@ -24,7 +24,7 @@
 // stores state.
 // --mock builds a single-player TRY-OUT site for hosts where App Data is off:
 // mock-sdk.js replaces /__vh/data/sdk.js (store in localStorage, a pretend
-// neighbour, the clock ?speed= times faster — default --speed, 60) and a
+// neighbour, the clock ?speed= times faster — default --speed, 1) and a
 // fixed banner says so, with a Reset link. Without --mock none of that is in
 // the output at all; check.mjs asserts it.
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -58,7 +58,7 @@ const LANDING_URL = (flag("--landing") ?? "https://halloween-vibehost-official.v
 if (!/^https:\/\/[^/]+$/.test(LANDING_URL)) fail(`--landing must be https://<host>, got "${LANDING_URL}"`);
 if (workspace !== undefined && !/^[a-z0-9][a-z0-9-]*$/.test(workspace)) fail(`--workspace must be a workspace slug, got "${workspace}"`);
 const mock = args.includes("--mock");
-const speed = Number(flag("--speed") ?? 60);
+const speed = Number(flag("--speed") ?? 1);
 if (!mock && flag("--speed") !== undefined) fail("--speed only applies to --mock builds");
 if (!(speed > 0 && speed <= 3600)) fail(`--speed must be between 1 and 3600, got "${flag("--speed")}"`);
 if (liveUrl && !/^https:\/\/[^/]+$/.test(liveUrl)) fail(`--url must be https://<host>, got "${liveUrl}"`);
@@ -258,29 +258,52 @@ const PAGES = { "index.html": { title: name, path: "/" }, "how-to-play.html": { 
 
 // The rules table, written once (template/rules.html), shown both in the
 // village's "How to play" overlay and on how-to-play.html.
-// Its numbers come from the engine: __RULE:key__ → "30 min",
-// __RULE:key:long__ → "30 minutes", __RULE:key:num__ → "30" (unit dropped).
+// Its numbers come from the engine: __RULE:key__ → "30 s" / "5 min",
+// __RULE:key:long__ → "30 seconds", __RULE:key:num__ → "30" (unit dropped).
 const E = await import(pathToFileURL(join(here, "template/engine.js")).href);
 const dur = (ms, form) => {
-  const [n, unit, units] = ms % E.HOUR ? [ms / E.MIN, "min", "minutes"] : [ms / E.HOUR, "h", ms === E.HOUR ? "hour" : "hours"];
-  return form === "num" ? String(n) : form === "long" ? `${n} ${units}` : `${n} ${unit}`;
+  const one = (n, unit, word) => (form === "num" ? String(n) : form === "long" ? `${n} ${n === 1 ? word : `${word}s`}` : `${n} ${unit}`);
+  if (ms < E.MIN) return one(ms / E.SEC, "s", "second");
+  if (ms % E.HOUR) return one(ms / E.MIN, "min", "minute");
+  return one(ms / E.HOUR, "h", "hour");
 };
-const RULE_VALUES = {
+const pctOf = (x) => Math.round(x * 100);
+// Durations (ms, written with a unit) and plain numbers (counts, candy, %).
+const DURATIONS = {
   open: E.RULES.stealOpensAfterMs,
-  steals: E.RULES.dailyStealCap,
-  helps: E.RULES.dailyHelpCap,
+  revenge: E.RULES.revengeWindowMs,
+  "guard.lasts": E.RULES.guardLastsMs,
+  luck: E.RULES.beginnersLuckMs,
   ...Object.fromEntries(
     Object.entries(E.RULES.kinds).flatMap(([k, v]) => [
       [`grow.${k}`, v.growMs],
-      [`yield.${k}`, v.yield],
       [`off.${k}`, E.goingOffAfter(k)],
       [`rot.${k}`, E.rottenAfter(k)],
     ]),
   ),
 };
+const NUMBERS = {
+  steals: E.RULES.dailyStealCap,
+  helps: E.RULES.dailyHelpCap,
+  "steal.amount": E.RULES.stealAmount,
+  "steal.max": E.RULES.maxStealsPerCrop,
+  "catch.pct": pctOf(1 - E.RULES.stealSuccessChance),
+  "revenge.pct": pctOf(E.RULES.revengeCatchChance),
+  "guard.pct": pctOf(E.RULES.guardCatchChance),
+  "cap.pct": pctOf(E.RULES.catchChanceCap),
+  "guard.cost": E.RULES.guardCost,
+  "guard.max": E.RULES.maxGuards,
+  chase: E.RULES.ghostChaseCost,
+  "help.pct": pctOf(E.RULES.helpBoost),
+  "help.reward": E.RULES.helpReward,
+  "secret.pct": pctOf(E.RULES.secretChance),
+  "off.factor": E.RULES.goingOffFactor,
+  ...Object.fromEntries(Object.entries(E.RULES.kinds).flatMap(([k, v]) => [[`yield.${k}`, v.yield], [`cost.${k}`, v.cost]])),
+};
 const ruleText = (key, form) => {
-  if (!(key in RULE_VALUES)) fail(`template/rules.html names __RULE:${key}__, which build.mjs doesn't know`);
-  return /^(open|grow|off|rot)\b/.test(key) ? dur(RULE_VALUES[key], form) : String(RULE_VALUES[key]);
+  if (key in DURATIONS) return dur(DURATIONS[key], form);
+  if (key in NUMBERS) return String(NUMBERS[key]);
+  fail(`template/rules.html names __RULE:${key}__, which build.mjs doesn't know`);
 };
 const RULES_HTML = readFileSync(join(here, "template/rules.html"), "utf8")
   .replace(/^<!--[\s\S]*?-->\n/, "")

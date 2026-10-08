@@ -2,7 +2,7 @@
 // skill's scripts (setup-link.mjs, make-your-own/) and the checks. Pure ESM,
 // no DOM: Node imports it too. Game rules live in engine.js; this holds the
 // shapes and limits around them, so no copy can drift.
-import { RULES } from "./engine.js";
+import { HOUR, MIN, RULES, SEC } from "./engine.js";
 
 /** A farm's link name (/farm/<slug>): 2–31 lowercase letters, digits or dashes. */
 export const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,30}$/;
@@ -41,10 +41,28 @@ export const LOTS_PER_DISTRICT = 8;
 /** The tour, in order: step n is TUTORIAL_STEPS[n - 1]. */
 export const TUTORIAL_STEPS = Object.freeze(["plant", "village", "steal", "guard", "harvest"]);
 
+/** A countdown, rounded up: "45s", "4m 10s", "12m", "1h 5m". */
+export function fmtLeft(ms) {
+  if (ms <= 0) return "now";
+  const s = Math.ceil(ms / SEC);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return s % 60 ? `${m}m ${s % 60}s` : `${m}m`;
+  return m % 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m / 60}h`;
+}
+/** A duration the way the page says it: "30 s", "5 min", "1 h 15 min", "2 h". */
+export function durText(ms) {
+  if (ms < MIN) return `${Math.round(ms / SEC)} s`;
+  const m = Math.round(ms / MIN);
+  if (m < 60) return `${m} min`;
+  return m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${ms / HOUR} h`;
+}
+
 /**
  * The fake SDK is a classic script (it must exist before the page's modules
  * run), so it can't import this file: whoever serves it fills its slot.
  */
 export const SHARED_SLOT = "/*@shared*/null";
 export const fillSharedSlot = (src) =>
-  String(src).replace(SHARED_SLOT, () => JSON.stringify({ scarecrows: SCARECROW_IDS, avatars: AVATARS, growMs: GROW_MS, lots: LOTS_PER_DISTRICT }));
+  String(src).replace(SHARED_SLOT, () =>
+    JSON.stringify({ scarecrows: SCARECROW_IDS, avatars: AVATARS, growMs: GROW_MS, lots: LOTS_PER_DISTRICT, stealOpensMs: RULES.stealOpensAfterMs, goingOffFactor: RULES.goingOffFactor, guardLastsMs: RULES.guardLastsMs }));

@@ -4,10 +4,11 @@
 import * as E from "../engine.js";
 import { avatarSrc, cropSrc } from "../art-check.js";
 import { inside } from "../clicks.js";
-import { $, A, CFG, esc, fmtLeft, ico, iconHtml, pct, RULES, state } from "../core.js";
+import { $, A, CFG, esc, ico, iconHtml, pct, RULES, state } from "../core.js";
 import { meP } from "../data.js";
 import { farmName, farmOf, nameOf } from "../farms.js";
 import { PULL_ACTS } from "../pull.js";
+import { fmtLeft } from "../shared.js";
 import { marksHtml } from "./marks.js";
 import { PRACTICE_ID } from "./tutorial.js";
 
@@ -71,12 +72,14 @@ function tileAction(ownerId, tile, st) {
     if (st.stage === "empty") return ["plant", "Plant a seed"];
     if (st.stage === "rotten") return ["clearRot", "Clear the rotten pumpkin"];
     if (st.stage === "ripe") return ["harvest", "Harvest"];
+    // Your own growing crop can be watered too, once (no candy for it).
+    if ((st.stage === "sprout" || st.stage === "growing") && !tile.helpedBy?.includes(state.meId)) return ["water", `Water it (${pct(E.RULES.helpBoost)}% sooner)`];
     return null;
   }
-  if (st.haunted) return ["chaseHelp", "Chase the ghost away (+1 candy)"];
-  if (st.stage === "ripe" && st.stealable) return ["steal", "Steal 1 candy"];
+  if (st.haunted) return ["chaseHelp", `Chase the ghost away (+${E.RULES.helpReward} candy)`];
+  if (st.stage === "ripe" && st.stealable) return ["steal", `Steal ${E.RULES.stealAmount} candy`];
   if (st.stage === "sprout" || st.stage === "growing") {
-    return tile.helpedBy?.includes(state.meId) ? null : ["water", "Water it (+1 candy)"];
+    return tile.helpedBy?.includes(state.meId) ? null : ["water", `Water it (${pct(E.RULES.helpBoost)}% sooner, +${E.RULES.helpReward} candy)`];
   }
   return null;
 }
@@ -128,8 +131,9 @@ function expandHtml(plot, p) {
   if (!ex.on || state.mode !== "play") return "";
   const next = E.nextSize(plot, ex);
   if (!next) return "";
-  const short = (p?.candy ?? 0) < ex.cost;
-  return `<p class="expand-row"><button type="button" class="btn" id="expand" data-next="${next.cols}x${next.rows}"${short ? " disabled" : ""} title="${esc(short ? `You need ${ex.cost} candy` : `Grow your field to ${next.cols}×${next.rows}`)}">Expand field — ${ex.cost} ${ico("candy")}</button></p>`;
+  const cost = E.expandCost(plot, ex);
+  const short = (p?.candy ?? 0) < cost;
+  return `<p class="expand-row"><button type="button" class="btn" id="expand" data-next="${next.cols}x${next.rows}" data-cost="${cost}"${short ? " disabled" : ""} title="${esc(short ? `You need ${cost} candy` : `Grow your field to ${next.cols}×${next.rows}`)}">Expand field — ${cost} ${ico("candy")}</button></p>`;
 }
 
 function farmHtml(id, t) {

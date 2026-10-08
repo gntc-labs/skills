@@ -3,7 +3,7 @@
 
 import * as E from "./engine.js";
 import * as FX from "./fx.js";
-import { $, esc, now, say, state, VILLAGE_BTN } from "./core.js";
+import { $, CFG, esc, now, say, state, VILLAGE_BTN } from "./core.js";
 import { meP } from "./data.js";
 import { farmOf, viewedFarmId } from "./farms.js";
 import { farmHtml } from "./views/farm.js";
@@ -85,6 +85,13 @@ function restoreFocus(key) {
   if (el && el !== document.activeElement && el.closest(REDRAWN)) el.focus({ preventScroll: true });
 }
 
+/** The tab says when one of my crops is ripe (a pumpkin + "Ready!"), and goes back once none is. */
+function readyTitle(t) {
+  const ripe = state.mode === "play" && (state.plots.get(state.meId)?.plot.tiles ?? []).some((tile) => E.tileState(tile, t).stage === "ripe");
+  const title = ripe ? `\u{1F383} Ready! · ${CFG.name}` : CFG.name;
+  if (document.title !== title) document.title = title;
+}
+
 function render() {
   if (state.freeze > 0) {
     state.dirty = true;
@@ -94,6 +101,7 @@ function render() {
   const t = now();
   const refocus = focusKey();
   syncPractice();
+  readyTitle(t);
   document.body.dataset.mode = state.mode;
   const route = state.route;
   const viewed = viewedFarmId();
