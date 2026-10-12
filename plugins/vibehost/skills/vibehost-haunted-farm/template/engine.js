@@ -25,8 +25,6 @@
 // Times are epoch ms in the engine. The page writes `plantedAt` as the
 // server's "$serverTime" marker, then converts the stored ISO string back
 // to ms with `fromStored` before calling in.
-//
-// Spec: docs/superpowers/specs/2026-10-06-haunted-farm-design.md "Game rules (v1)".
 
 export const SEC = 1000;
 export const MIN = 60 * SEC;
