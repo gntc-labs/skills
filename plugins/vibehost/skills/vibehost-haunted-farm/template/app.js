@@ -18,7 +18,7 @@
 // that one farm's plot (and yours, which a steal writes a ghost onto).
 //
 // Modes:
-//   play   — me.player: the full game
+//   play   — me.canWrite: the full game
 //   watch  — signed out / not a member / password: read-only, the "Play"
 //            button goes to /how-to-play.html?reason=…
 //   rest   — no SDK, /me failed, flag off: "the village is resting"
@@ -58,7 +58,7 @@ async function boot() {
   } catch {
     return enterRest();
   }
-  if (state.vh.player && state.vh.user) {
+  if (state.vh.canWrite && state.vh.user) {
     state.mode = "play";
     state.meId = state.vh.user.id;
     state.revealed = loadRevealed();
@@ -69,7 +69,7 @@ async function boot() {
       return enterRest();
     }
   } else if (!state.vh.reason) {
-    // Not a player and no reason: the workspace is frozen. Rest, don't tease.
+    // Can't write and no reason: the workspace is frozen. Rest, don't tease.
     return enterRest();
   } else {
     state.mode = "watch";

@@ -416,7 +416,7 @@ export default async function gate() {
   const FIRST_PLANT = "a brand-new player in an empty village: setup, then their own farm, tap an empty tile, Common — a sprout appears, no 'bump' toast";
   await guarded(FIRST_PLANT, async (ref) => {
     const NEWBIE = { id: "u_first", name: "Wren", avatarUrl: null };
-    const { page, ctx, errors } = await open(PHONE, { now: SCENARIOS.noFarm.now, me: { player: true, user: NEWBIE }, docs: {} });
+    const { page, ctx, errors } = await open(PHONE, { now: SCENARIOS.noFarm.now, me: { canWrite: true, user: NEWBIE }, docs: {} });
     ref.ctx = ctx;
     const logged = [];
     page.on("console", (m) => m.type() === "error" && /haunted-farm/.test(m.text()) && logged.push(m.text()));
