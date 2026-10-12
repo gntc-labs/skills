@@ -18,9 +18,9 @@
 // unwraps each answer's `data`). This fake must return exactly these; the
 // game reads them as written here, and dev/mock-sdk.test.mjs holds the fake
 // to them:
-//   connect()              → vh: { player, reason?, user?, serverTime, now(),
+//   connect()              → vh: { canWrite, reason?, user?, serverTime, now(),
 //                             list, get, put, patch, remove, log, poll }
-//                             (from GET me → { player, reason?, user?, serverTime })
+//                             (from GET me → { canWrite, reason?, user?, serverTime })
 //   vh.list(c, {cursor})   → { docs: Doc[], nextCursor }
 //   vh.get(c, id)          → { doc: Doc }, or null when there is none (404)
 //   vh.put / vh.patch      → { doc: Doc }   (expectedVersion: 0 = create)
@@ -34,7 +34,9 @@
 //   Reads are limited per app and per visitor IP, so a page must honour it.
 //   check.mjs can make this fake answer 429: scenario.rateLimit =
 //   { ops: ["list", …], times, retryAfter }.
-// Also as the real one: "$serverTime" substitution and owner-only PUT/DELETE.
+// Also as the real one: "$serverTime" substitution, and a neutral store: any
+// writer may PUT, PATCH or DELETE any doc, and ownerUserId (the creator)
+// grants nothing, so the game checks it itself.
 // A normal build never contains this file (check.mjs asserts it).
 (function (g) {
   "use strict";
@@ -194,7 +196,7 @@
     return {
       v: STORE_VERSION,
       farmers: farmers,
-      me: { player: true, user: { id: ME, name: "You", avatarUrl: null } },
+      me: { canWrite: true, user: { id: ME, name: "You", avatarUrl: null } },
       clock: { real: real, virtual: t, speed: speed },
       log: [],
       docs: docs,
@@ -231,7 +233,7 @@
     return { doc: dto(c, id) };
   }
   function me() { return state.me.user && state.me.user.id; }
-  function guard() { if (!state.me.player) throw err(403, "APP_DATA_NOT_PLAYER"); }
+  function guard() { if (!state.me.canWrite) throw err(403, "APP_DATA_WRITE_FORBIDDEN"); }
   // A scenario's rate limit: the next `times` calls of `ops` answer 429.
   var limit = S && S.rateLimit ? { ops: S.rateLimit.ops || [], times: S.rateLimit.times || 1, retryAfter: S.rateLimit.retryAfter || 1 } : null;
   // check.mjs, after the page is up: the next `times` calls of `ops` answer 429.
@@ -260,7 +262,6 @@
       return later(function () {
         throttle("put"); guard(); o = o || {};
         var cur = coll(c)[id];
-        if (cur && cur.owner !== me()) throw err(403, "APP_DATA_NOT_PLAYER");
         if (o.expectedVersion !== undefined && (cur ? cur.version : 0) !== o.expectedVersion) throw err(409, "APP_DATA_VERSION_CONFLICT", cur ? dto(c, id) : null);
         return write(me(), c, id, sub(data), "put", me());
       });
@@ -281,7 +282,6 @@
         guard();
         var cur = coll(c)[id];
         if (!cur) throw err(404, "NOT_FOUND");
-        if (cur.owner !== me()) throw err(403, "APP_DATA_NOT_PLAYER");
         delete coll(c)[id]; record(me(), c, id, "delete"); save();
         return null;
       });
@@ -408,7 +408,7 @@
     connect: function () {
       return new Promise(function (ok) { g.setTimeout(ok, 30); }).then(function () {
         var vh = {
-          player: !!state.me.player,
+          canWrite: !!state.me.canWrite,
           reason: state.me.reason,
           user: state.me.user || null,
           serverTime: iso(),

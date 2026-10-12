@@ -132,7 +132,7 @@ const { chromium } = await loadPlaywright();
 
 // ---------- static server (with the site's vibehost.json rewrites) ----------
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".png": "image/png", ".json": "application/json" };
-// Same matching the VibeHost dispatcher does for 200 rewrites: exact paths,
+// Same matching VibeHost does for 200 rewrites: exact paths,
 // or a prefix ending in "*" ("/farm/:slug*" is stored as "/farm/*").
 const REWRITES = (() => {
   const p = join(site, "vibehost.json");

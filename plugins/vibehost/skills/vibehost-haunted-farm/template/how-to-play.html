@@ -157,7 +157,7 @@
     // "How to play" flicker).
     if (!window.VibeHostData) return show("RESTING");
     window.VibeHostData.connect().then(function (vh) {
-      show(vh.player ? "PLAYER" : vh.reason || "RESTING");
+      show(vh.canWrite ? "PLAYER" : vh.reason || "RESTING");
     }, function () { show("RESTING"); });
   })();
 </script>

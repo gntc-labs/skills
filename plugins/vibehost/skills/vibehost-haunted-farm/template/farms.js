@@ -57,7 +57,7 @@ function cleanFarm(raw) {
   return farm;
 }
 
-/** Claim the slug (slugs/<slug> is owner-only, so the first PUT wins) and write farms/<you>. */
+/** Claim the slug (a PUT with expectedVersion 0, so the first one wins) and write farms/<you>. */
 async function saveFarm(farm) {
   const me = state.meId;
   const claimed = await getDoc("slugs", farm.slug);
@@ -138,9 +138,10 @@ async function migrateMyArt() {
  * claim is under two minutes old and its owner has no farm yet: that's a
  * newcomer mid-setup.
  *
- * Claims are owner-only docs, so an orphan can't be overwritten: the lot is
- * then claimed as "<lot>~<me>" beside it. Two farmers can pick the same gap
- * at once: on "<lot>" the first PUT wins (a loser gets 409 / 403); on
+ * The page never overwrites someone else's claim (App Data would allow it;
+ * the game does not): an orphan stays, and the lot is claimed as
+ * "<lot>~<me>" beside it. Two farmers can pick the same gap at once: on
+ * "<lot>" the first PUT wins (expectedVersion 0, so a loser gets 409); on
  * "<lot>~<me>" both land, so each re-reads and the earlier claim keeps it.
  */
 const PENDING_CLAIM_MS = 2 * 60_000;
@@ -167,7 +168,7 @@ async function claimLot() {
         const mine = claims.find((c) => c.docId === id);
         await state.vh.put(lotsColl(district), id, { userId: me }, { expectedVersion: mine ? mine.version : 0 });
       } catch (e) {
-        if (e.code !== "APP_DATA_VERSION_CONFLICT" && e.code !== "APP_DATA_NOT_PLAYER") throw e;
+        if (e.code !== "APP_DATA_VERSION_CONFLICT" && e.code !== "APP_DATA_WRITE_FORBIDDEN") throw e;
         continue;
       }
       if (id === String(lot)) return { district, lot };
