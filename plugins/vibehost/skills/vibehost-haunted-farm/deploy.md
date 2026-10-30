@@ -4,7 +4,7 @@
 
 ## 1. Start of the session
 
-**a. Connection.** VibeHost MCP tools already in this session (`list_workspaces`, `create_app`, `request_upload`, `deploy` …) → use them. Otherwise the CLI; if `vibehost --version` fails, install it quietly: `curl -fsSL -o vibehost-install.sh https://vibehost.com/install.sh && sh vibehost-install.sh && rm vibehost-install.sh`. Never ask the creator to add an MCP server or restart mid-flow.
+**a. Connection.** VibeHost MCP tools already in this session (`list_workspaces`, `create_app`, `request_upload`, `deploy` …) → use them. The vibehost plugin brings this server; until the creator signs in, Claude Code lists only its `authenticate` tool, and that counts too (MCP, sign in per §2a). Otherwise the CLI; if `vibehost --version` fails, install it quietly: `curl -fsSL -o vibehost-install.sh https://vibehost.com/install.sh && sh vibehost-install.sh && rm vibehost-install.sh`. Never ask the creator to add an MCP server or restart mid-flow.
 
 **b. Signed in?** (`vibehost whoami` / `list_workspaces` works)
 - **Yes:** list the workspaces (`vibehost workspace list`). More than one → **ask which**, the active one first — **only that workspace's members can farm**. Pass `--workspace <slug>` (MCP: `workspace`) every time.
@@ -28,7 +28,7 @@ The village is the app whose `description` contains **`[haunted-farm:village]`**
 3. Don't ask them to come back: poll `vibehost whoami` every few seconds; when it works, say "Got it" and carry on.
 4. The code expires after 10 minutes. If login exits without success, run it again and open the new URL ("One more click: press Approve").
 
-MCP: the first tool call opens its own sign-in ("sign in with Google, then approve"; Codex: `codex mcp login vibehost`). Never ask for or type a password; never pass `--email`/`--password` or use `vibehost register`.
+MCP: if only VibeHost's `authenticate` tool is listed, call it, open the URL it returns and say "sign in with Google, then approve"; the other tools appear once they approve. A browser that ends on a `localhost` page that won't load: pass that page's full address to `complete_authentication`. Otherwise the first tool call opens its own sign-in (Codex: `codex mcp login vibehost`). Never ask for or type a password; never pass `--email`/`--password` or use `vibehost register`.
 
 **b. The visibility question** — exactly two options, `workspace` first:
 1. **Workspace (recommended)** — "Only your teammates see the village, and everyone who opens it can play."
