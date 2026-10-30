@@ -105,9 +105,14 @@ if (brandDir) {
 }
 if (ogImage !== undefined && !/^https:\/\/[^\s"<>]+$/i.test(ogImage)) fail(`--og-image must be an absolute https URL`);
 
+// The page is one file, kept in the template as four: a line "/*@include <file>*/" in template/index.html becomes
+// that file's text (page.css, then the one inline script cut in two, page-1.js + page-2.js). Each file stays under
+// the 256 KiB the plugin directory reads in full; the built index.html is the same as with one template file.
+const template = readFileSync(join(here, "template", "index.html"), "utf8").replace(/^\/\*@include ([\w.-]+)\*\/\n/gm, (_, f) =>
+  readFileSync(join(here, "template", f), "utf8"),
+);
 // The owner's showcase: a share link (or its p= part) from THIS patch, checked with the page's own link rules
 // (the template's //@link-rules block, run here as-is), so build and page can never disagree about a link.
-const template = readFileSync(join(here, "template", "index.html"), "utf8");
 const rules = (() => {
   const m = /\/\/@link-rules-start\n([\s\S]*?)\/\/@link-rules-end/.exec(template);
   if (!m) fail("template has no //@link-rules block");

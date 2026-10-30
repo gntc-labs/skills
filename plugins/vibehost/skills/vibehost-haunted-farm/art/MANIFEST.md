@@ -12,7 +12,7 @@ Generated on the Mac (2026-10) from the prompts below, one file per prompt:
 4. **Snapped to the 16-colour palette** (`art/palette.json`).
 5. **rsynced** over the placeholders in `art/`.
 
-Exception: `ui/og.png` is a **Lanczos resize** to 1200×630 and is **not** palette-snapped (it is a link-preview photo, never drawn on the pixel grid). It is the **generic** card: `build.mjs` renders each village its own (`og.mjs`: the map, the name, the tagline) and ships this one only when no Playwright is at hand. The favicon set in `ui/icons/` (16/32/48, `favicon.ico`, 180, 192, 512) is made from `ui/favicon.png` by `make-your-own/icons.mjs`, whole-pixel scaling only.
+Exception: `ui/og.png` is a **Lanczos resize** to 1200×630 and is **not** palette-snapped (it is a link-preview photo, never drawn on the pixel grid). It is the **generic** card: `build.mjs` renders each village its own (`og.mjs`: the map, the name, the tagline) and ships this one only when no Playwright is at hand. The favicon set in `ui/icons/` (16/32/48, 180, 192, 512) is made from `ui/favicon.png` by `make-your-own/icons.mjs`, whole-pixel scaling only; `build.mjs` packs `favicon.ico` from the 16/32/48 PNGs.
 
 **Art batch 2**: `crops/rare-sprout`, `crops/common-growing`, `crops/rare-growing`, `crops/legendary-growing`, `crops/secret-ripe`, `tiles/soil`, `props/sack`, `props/watering-can` and `ui/frame` were regenerated the same way. `ui/frame.png` is now chroma-keyed (transparent outside the wood); the template 9-slices it at 16 px — re-measure the corner studs and change `.panel` in both templates if the frame is ever redrawn.
 

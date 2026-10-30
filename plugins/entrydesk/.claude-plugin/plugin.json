@@ -1,9 +1,10 @@
 {
   "name": "entrydesk",
   "description": "Agent skills for EntryDesk — chat with AI models and agents, schedule agents, and call connected SaaS tools (Slack, GitHub, Google Drive, …) from the terminal.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": {
     "name": "GNTC Labs",
     "email": "developer@gntc.com"
-  }
+  },
+  "license": "MIT"
 }

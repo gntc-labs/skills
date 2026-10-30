@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 // The favicon set, from the pixel pumpkin (art/ui/favicon.png, 32×32), into
-// art/ui/icons/: favicon-16/32/48.png, favicon.ico (16 + 32 + 48),
-// apple-touch-icon.png (180, on the night colour, padded) and icon-192/512.png
-// for site.webmanifest. Whole-pixel scaling only, never a blur: 16 takes the
-// most common colour of each 2×2 cell, 48 is that ×3, the rest are 32 × an
-// integer on a padded night square. build.mjs and the landing copy these.
+// art/ui/icons/: favicon-16/32/48.png, apple-touch-icon.png (180, on the
+// night colour, padded) and icon-192/512.png for site.webmanifest. Whole-pixel
+// scaling only, never a blur: 16 takes the most common colour of each 2×2
+// cell, 48 is that ×3, the rest are 32 × an integer on a padded night square.
+// build.mjs and the landing copy these. No favicon.ico here: the plugin
+// directory holds any .ico for review, so build.mjs packs it from the PNGs.
 //   node make-your-own/icons.mjs [--playwright <path>]   (decodes with the browser, like pixelate.mjs)
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { decodeImage, launchBrowser, loadChromium } from "../browser.mjs";
-import { encodeIco, encodePng8 } from "./png.mjs";
+import { encodePng8 } from "./png.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ART = join(here, "..", "art");
@@ -87,7 +88,6 @@ if (runAsCommand) {
     "icon-192.png": png(onNight(upscale(src, 5), 192)),
     "icon-512.png": png(onNight(upscale(src, 14), 512)),
   };
-  files["favicon.ico"] = encodeIco([files["favicon-16.png"], files["favicon-32.png"], files["favicon-48.png"]]);
   mkdirSync(ICON_DIR, { recursive: true });
   for (const [name, buf] of Object.entries(files)) writeFileSync(join(ICON_DIR, name), buf);
   console.log(Object.entries(files).map(([n, b]) => `${n} ${b.length} B`).join("\n"));

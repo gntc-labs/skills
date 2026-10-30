@@ -1,5 +1,5 @@
 // Tiny indexed-PNG writer + the rules a custom avatar / crop skin must meet.
-// No dependencies: node:zlib + a CRC table. Shared by
+// No dependencies: node:zlib + a CRC table. Shared by build.mjs (favicon.ico),
 // pixel-grid.mjs, pixelate.mjs and setup-link.mjs; the page applies the same
 // rules again before it shows anything (template/art-check.js checkPng).
 import { readFileSync } from "node:fs";
