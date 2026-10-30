@@ -87,18 +87,33 @@ Coming soon: `vibehost-share`, `vibehost-manage-releases`, `vibehost-custom-doma
 plugins/
   vibehost/
     .claude-plugin/plugin.json
+    .claude-plugin/icon.png                  # listing icon in the Claude plugin directory
     skills/vibehost-deploy/SKILL.md
     skills/vibehost-pumpkin-patch/SKILL.md   # + the template, art and build scripts it uses
     skills/vibehost-haunted-farm/SKILL.md    # + the template, art, build and check scripts it uses
   entrydesk/
     .claude-plugin/plugin.json
+    .claude-plugin/icon.png
     skills/entrydesk-cli/SKILL.md
+LICENSE                         # MIT, for every plugin here
 ```
 
 Each product is one plugin under `plugins/`; each capability is one `skills/<name>/SKILL.md`. Adding a product = a new folder + one entry in `marketplace.json`; users who already ran `/plugin marketplace add gntc-labs/skills` see it automatically. The `skills/<name>/SKILL.md` convention is shared between Claude Code plugins, Codex plugins and `npx skills`, so one repo serves all three.
 
 **Bump `version` in the plugin's `.claude-plugin/plugin.json` with every change to its skills**, and keep its entry in `marketplace.json` in step. Claude Code reads the version from `plugin.json` and `claude plugin update` reports "already at the latest version" while it is unchanged, so a change shipped without a bump never reaches people who already installed the plugin. Codex picks up changes on `marketplace upgrade` either way.
 
+### Claude plugin directory
+
+Before submitting a plugin to the directory (<https://claude.ai/directory/manage>), run its checks locally; this runs a subset of what the portal's **Validate** does:
+
+```bash
+claude plugin validate --profile directory --strict plugins/vibehost
+```
+
+- The plugin needs a license: the `LICENSE` at the repository root counts for every plugin under `plugins/`, and each `plugin.json` also sets `"license": "MIT"`.
+- `.claude-plugin/icon.png` (a square PNG, 512 to 2048 px, under 2 MB) becomes the listing icon only the first time the plugin is saved or submitted in the portal. Changing it later doesn't change the listing.
+- The directory reads every file that isn't an image or font only up to 256 KiB, and holds any other binary (`.ico`, `.zip`, …) for review. Keep scripts and templates under that size and generate other binaries at build time.
+
 ## License
 
-MIT
+MIT, see [LICENSE](LICENSE).

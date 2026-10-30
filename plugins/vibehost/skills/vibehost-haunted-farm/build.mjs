@@ -12,7 +12,8 @@
 //                           crawlers ask for it); rendered with Playwright from
 //                           the project folder, else the generic card
 //   site/favicon.ico, favicon-16/32/48.png, apple-touch-icon.png, icon-192/512.png,
-//   site/site.webmanifest   the icon set (art/ui/icons, from make-your-own/icons.mjs)
+//   site/site.webmanifest   the icon set (art/ui/icons, from make-your-own/icons.mjs;
+//                           favicon.ico is packed from the PNGs at build time)
 //   site/vibehost.json      rewrites /farm/* and /setup to index.html: one
 //                           village, one link per farm. VibeHost
 //                           reads it at deploy time and doesn't serve it.
@@ -33,6 +34,7 @@ import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { launchBrowser, loadChromium } from "./browser.mjs";
+import { encodeIco } from "./make-your-own/png.mjs";
 import { renderCard, villageCardHtml } from "./og.mjs";
 import { fillSharedSlot } from "./template/shared.js";
 import { normalizeRules } from "./village-rules.mjs";
@@ -134,8 +136,10 @@ if (browser) {
 }
 const og = readFileSync(join(outDir, "og.png"));
 // The favicon set (make-your-own/icons.mjs) at the site root, where browsers look.
-const ICONS = ["favicon.ico", "favicon-16.png", "favicon-32.png", "favicon-48.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png"];
+// favicon.ico is packed here from the 16/32/48 PNGs: the plugin ships no .ico.
+const ICONS = ["favicon-16.png", "favicon-32.png", "favicon-48.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png"];
 for (const f of ICONS) copyFileSync(join(here, "art/ui/icons", f), join(outDir, f));
+writeFileSync(join(outDir, "favicon.ico"), encodeIco(["favicon-16.png", "favicon-32.png", "favicon-48.png"].map((f) => readFileSync(join(outDir, f)))));
 const THEME = palette.void;
 writeFileSync(
   join(outDir, "site.webmanifest"),
@@ -344,4 +348,4 @@ for (const page of ["index.html", "how-to-play.html"]) {
   writeFileSync(join(outDir, page), html);
 }
 
-console.log(JSON.stringify({ out: outDir, name, theme: theme.id, weather: weather.id, files: wanted.length + 5 + ICONS.length + scripts.length + (mock ? 1 : 0), placeholders, og: ogKind, url: liveUrl ?? null, mock, ...(mock ? { speed } : {}) }));
+console.log(JSON.stringify({ out: outDir, name, theme: theme.id, weather: weather.id, files: wanted.length + 6 + ICONS.length + scripts.length + (mock ? 1 : 0), placeholders, og: ogKind, url: liveUrl ?? null, mock, ...(mock ? { speed } : {}) }));

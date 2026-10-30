@@ -1,0 +1,754 @@
+:root{
+  --bg:#14101f; --accent:#ffd27a; --ground:#2a1a2e; --fx:50%;
+  --pumpkin:#f28a2e; --pumpkin-dark:#d9661b; --glow:#ffd27a; --ink:#f4ead8; --muted:#bdb4c9;
+  --line:rgba(255,255,255,.14); --chip:rgba(255,255,255,.07); --chip-on:rgba(242,138,46,.22);
+  --display:"Creepster",ui-rounded,system-ui,cursive;
+  --top:max(58px,calc(env(safe-area-inset-top) + 50px));
+}
+*{box-sizing:border-box}
+/* The window is the ONE scroller. overflow-x sits on <html> only: on <body> too it would turn body into its own
+   (non-scrolling) scroll container, which on iOS swallows swipes and keeps position:sticky from ever sticking. */
+html{overflow-x:hidden}
+html,body{margin:0;min-height:100%}
+body{
+  background:var(--bg);color:var(--ink);
+  font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-tap-highlight-color:transparent;
+  min-height:100vh;min-height:100svh;display:flex;flex-direction:column;
+}
+[hidden]{display:none!important}
+button{font:inherit}
+/* taps: no 300 ms delay, no double-tap zoom on anything you press */
+button,a,input,label,select,textarea,[role=button],[role=tab]{touch-action:manipulation}
+/* one icon set: 24-unit grid, 2px rounded strokes, currentColor, sized to the label */
+.i{width:1.15em;height:1.15em;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.2em;overflow:visible}
+img{-webkit-user-drag:none;user-select:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.ico{width:1.35em;height:1.35em;object-fit:contain;vertical-align:-.32em;flex-shrink:0;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+
+/* ---------- scene backdrop: the patch stays visible on every screen ---------- */
+.scene{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;background:var(--bg)}
+/* x = the scene's focus: that point of the art sits at the same fraction of the viewport, so the landmark survives a narrow crop */
+.scene-img{position:absolute;inset:0;background-size:cover;background-position:var(--fx) 70%;transition:opacity 1.2s ease,filter 1.2s ease,inset 1.2s ease}
+.scene-shade{position:absolute;inset:0;transition:opacity 1.2s ease;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--bg) 62%,transparent) 0%,color-mix(in srgb,var(--bg) 18%,transparent) 30%,transparent 46%,color-mix(in srgb,var(--bg) 58%,transparent) 70%,color-mix(in srgb,var(--bg) 92%,transparent) 100%)}
+.scene-night{position:absolute;inset:0;background:rgba(4,6,22,.6);opacity:0;transition:opacity 1.6s ease}
+.scene-vig{position:absolute;inset:0;opacity:0;transition:opacity 1s ease;
+  background:radial-gradient(ellipse 60% 50% at 50% 48%,rgba(5,4,12,.62),rgba(5,4,12,.25) 70%,rgba(5,4,12,.1))}
+.stars{position:absolute;inset:0;opacity:0;transition:opacity 1.6s ease;
+  background-image:
+   radial-gradient(1.3px 1.3px at 12% 18%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 28% 8%,#fffc 50%,transparent 51%),
+   radial-gradient(1.5px 1.5px at 47% 14%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 66% 6%,#fffc 50%,transparent 51%),
+   radial-gradient(1.3px 1.3px at 83% 20%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 92% 9%,#fffc 50%,transparent 51%),
+   radial-gradient(1px 1px at 6% 32%,#fffa 50%,transparent 51%),radial-gradient(1.2px 1.2px at 95% 36%,#fffc 50%,transparent 51%),
+   radial-gradient(1px 1px at 38% 26%,#fffa 50%,transparent 51%),radial-gradient(1px 1px at 74% 30%,#fffa 50%,transparent 51%)}
+body.night .scene-night{opacity:1} body.night .stars{opacity:.9}
+body.ev-thunderstorm.night .stars{opacity:0}
+/* blurred, the backdrop overhangs the viewport: a blur fades its own box edges, which showed as a dark frame */
+body.s-carve .scene-img,body.s-view .scene-img{opacity:.8;filter:blur(3px) brightness(.62) saturate(.85);inset:-24px}
+body.s-carve .scene-vig,body.s-view .scene-vig{opacity:1}
+body.dark .scene-img{opacity:.75;filter:blur(4px) brightness(.4) saturate(.8);inset:-24px}
+body.dark .scene-night{opacity:.55}
+
+/* ---------- mute toggle: a dark translucent pill in the top-right safe area, above every screen ----------
+   absolute, not fixed: it sits in the empty band above each screen's title and scrolls away with the page,
+   so a scrolled title never slides under it */
+.mute{position:absolute;z-index:40;top:calc(env(safe-area-inset-top) + 9px);right:calc(env(safe-area-inset-right) + 10px);
+  width:52px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(8,6,16,.74);color:#fff;
+  cursor:pointer;display:grid;place-items:center;padding:0;box-shadow:0 2px 10px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08);
+  backdrop-filter:blur(8px) saturate(1.2);-webkit-backdrop-filter:blur(8px) saturate(1.2);transition:background .15s ease,border-color .15s ease}
+.mute:hover{background:rgba(20,16,34,.86);border-color:rgba(255,255,255,.5)}
+.mute:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.mute svg{width:22px;height:22px;display:block;overflow:visible;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
+.mute .cone{fill:currentColor}
+.mute .wave,.mute .slash{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.mute .slash{display:none;stroke-width:2.2}
+.mute .slash.gap{stroke:rgba(8,6,16,.95);stroke-width:5.5}
+.mute[aria-pressed="true"]{color:#ffb39b;border-color:rgba(255,179,155,.55)}
+.mute[aria-pressed="true"] .wave{opacity:.35}
+.mute[aria-pressed="true"] .slash{display:inline}
+.mute[aria-pressed="true"] .cone{opacity:.85}
+
+/* ---------- weather events (night phase), behind the page text ---------- */
+.event{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+.ev-moon{position:absolute;right:6%;top:max(150px,19vh);width:clamp(110px,30vw,230px);aspect-ratio:1}
+.ev-moon .halo{position:absolute;inset:-70%;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(255,243,200,.42),rgba(255,236,180,.16) 45%,rgba(255,236,180,0))}
+.ev-moon img{position:relative;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 0 24px rgba(255,236,170,.65))}
+.ev-crow{position:absolute;left:0;top:16vh;width:clamp(78px,20vw,130px)}
+.ev-crow img{width:100%;display:block}
+.ev-crow .caw{position:absolute;right:-26px;top:-20px;background:#fff;color:#111;font:700 .85rem/1 system-ui;padding:5px 9px;border-radius:12px;opacity:0}
+/* storm clouds: a thin band hugging the top edge, two depths, placed by JS around the step label + title */
+.ev-sky{position:absolute;inset:0}
+.ev-cloud{position:absolute;max-width:none;opacity:.7;filter:brightness(.82) saturate(.8) drop-shadow(0 6px 10px rgba(0,0,0,.35))}
+.ev-cloud.far{opacity:.4;filter:brightness(.7) saturate(.7) blur(.6px)}
+canvas.ev-rain{position:absolute;inset:0;width:100%;height:100%}
+.ev-dark{position:absolute;inset:0;background:#04050c;opacity:0;transition:opacity .9s ease-out}
+.ev-dark.on{opacity:.4;transition:opacity .3s ease-in}
+.ev-flash{position:absolute;inset:0;background:#eef3ff;opacity:0;transition:opacity .25s ease-out}
+.ev-flash.on{opacity:.3;transition:none}
+.ev-bolt{position:absolute;top:2vh;height:min(50vh,420px);opacity:0;transition:opacity .2s ease-out;filter:drop-shadow(0 0 18px rgba(255,255,220,.9))}
+.ev-bolt.on{opacity:1;transition:none}
+.ev-star{position:absolute;width:160px;height:2px;border-radius:2px;opacity:0;
+  background:linear-gradient(90deg,rgba(255,255,255,0),#fff 80%,#fff);box-shadow:0 0 8px #fff;transform-origin:100% 50%}
+.ev-ff{position:absolute;width:var(--sz);height:var(--sz)}
+.ev-ff i{position:absolute;inset:-120%;border-radius:50%;background:radial-gradient(closest-side,rgba(255,246,150,.75),rgba(220,255,120,.22) 50%,rgba(220,255,120,0))}
+.ev-ff img{position:relative;width:100%;height:100%;object-fit:contain}
+.ev-ghost{position:absolute;left:0;width:var(--sz)}
+.ev-ghost img{width:100%;display:block;opacity:.93;filter:drop-shadow(0 0 14px rgba(220,235,255,.45))}
+
+/* ---------- layout ---------- */
+/* main spans the whole viewport (its content still centres at 1180px via the side padding), so its overflow-x clip
+   (which keeps the candle spill from widening the page on phones) lands on the viewport edge: on a wide window a
+   1180px-wide main cut the spill off in a hard vertical line */
+main{position:relative;z-index:2;flex:1;width:100%;margin:0 auto;overflow-x:clip;
+  padding:var(--top) max(16px,calc((100% - 1180px) / 2 + 16px)) 8px;display:flex;flex-direction:column}
+#note{align-self:center;margin:0 0 10px;padding:8px 14px;border-radius:999px;max-width:100%;
+  background:rgba(242,138,46,.16);border:1px solid rgba(242,138,46,.45);color:#ffd9b0;font-size:.92rem;text-align:center}
+.screen{width:100%}
+h1,.display{font-family:var(--display);font-weight:400;letter-spacing:.03em}
+
+/* landing: words on top, the patch in the middle (where its quirk lives), actions below */
+/* min-heights use svh (the viewport with the browser bars showing): a dvh layout grows and shrinks while the bars
+   slide during a scroll, which makes iOS scrolling judder and jump */
+#landing{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;
+  min-height:calc(100vh - var(--top) - 90px);min-height:calc(100svh - var(--top) - 90px)}
+.intro,.outro{display:flex;flex-direction:column;align-items:center;gap:10px;max-width:520px;width:100%}
+/* names as typed: the uppercase labels never change the case of the owner's or the patch's name */
+.eyebrow .nm,.secretBanner .nm{text-transform:none;letter-spacing:.04em}
+.eyebrow .nm{font-family:var(--owner-font,inherit);font-weight:var(--owner-weight,inherit)}
+.eyebrow{margin:0;font-size:.82rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;
+  overflow-wrap:anywhere;text-shadow:0 1px 8px rgba(0,0,0,.7)}
+#patchName{margin:0;color:var(--accent);font-size:clamp(2.4rem,11vw,4.4rem);line-height:1;overflow-wrap:anywhere;
+  text-shadow:0 3px 0 rgba(0,0,0,.45),0 0 28px color-mix(in srgb,var(--accent) 40%,transparent)}
+/* the creator's words in another script (build.mjs sets --name-font / --note-font / --owner-font, subset web fonts) */
+/* ids: .patchTag sets var(--display) further down */
+#patchName,#patchTag{font-family:var(--name-font,var(--display));font-weight:var(--name-weight,400)}
+.cjk-name #patchName{font-size:clamp(2.1rem,9.6vw,3.9rem);letter-spacing:.02em;line-height:1.08;word-break:keep-all;text-wrap:balance}
+.cjk-name #patchTag{letter-spacing:.02em}
+/* visitor-typed text (From / Message) in CJK: the system's CJK face, upright (a slanted CJK font is a fake italic) */
+.cjk-text{font-family:system-ui,-apple-system,"PingFang TC","Hiragino Sans","Noto Sans CJK TC","Microsoft JhengHei",sans-serif!important;font-style:normal!important}
+.tagline{margin:0;color:var(--ink);font-size:1.05rem;max-width:34ch;text-shadow:0 1px 10px rgba(0,0,0,.85);overflow-wrap:anywhere}
+.patchstage{position:relative;flex:1 1 auto;min-height:118px;width:calc(100% + 32px);margin:0 -16px;overflow:hidden;pointer-events:none}
+.sig{display:flex;align-items:center;gap:12px;text-align:left;padding:8px 14px 8px 8px;border-radius:18px;
+  background:rgba(10,8,18,.6);border:1px solid var(--line);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.sig img{width:52px;height:52px;object-fit:contain}
+.sig .k{display:block;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.sig b{font-size:1.05rem}
+.cards{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+/* the owner's own carved pumpkin, lit, sitting on the scene's soil beside the quirk, with a little stake sign in the
+   welcome sign's wood. Pumpkin + sign are one link (opens it in view mode). placeShowcase() sets its size and spot
+   from the soil line (groundLine, as the plot does); until then it stays hidden (visibility), so nothing jumps. */
+#landing{position:relative}
+.ownpk{position:absolute;z-index:3;left:0;top:0;display:flex;flex-direction:column;align-items:flex-start;--pk:112px;visibility:hidden;
+  color:#fff1d6;text-decoration:none;-webkit-tap-highlight-color:transparent;border-radius:14px}
+.ownpk.placed{visibility:visible}
+.ownpk.flip{align-items:flex-end}
+/* the sign stands in the soil just behind the pumpkin's far shoulder: its post runs down behind the pumpkin */
+.ownpk .stake{position:relative;z-index:0;order:-1;align-self:flex-end;display:flex;flex-direction:column;align-items:center;
+  padding-bottom:calc(var(--pk) * .3);margin-bottom:calc(var(--pk) * -.42);transform:rotate(4deg);transform-origin:50% 100%}
+.ownpk.flip .stake{align-self:flex-start;transform:rotate(-4deg)}
+.ownpk .stake::after{content:"";position:absolute;z-index:-1;bottom:0;left:calc(50% - 4px);width:8px;height:calc(var(--pk) * .42);border-radius:2px 2px 1px 1px;
+  background:linear-gradient(90deg,#3e2610,#6b4524 45%,#4a2d15);box-shadow:0 2px 3px rgba(0,0,0,.5)}
+.ownpk canvas{position:relative;z-index:1;width:var(--pk);height:var(--pk);display:block;flex-shrink:0;margin-bottom:calc(var(--pk) * -.04);
+  filter:drop-shadow(0 0 10px rgba(255,170,60,.7)) drop-shadow(0 4px 6px rgba(0,0,0,.55))}
+.ownpk .board{display:flex;flex-direction:column;align-items:center;padding:5px 11px 4px;border-radius:6px 8px 7px 5px;border:2px solid #3b2210;
+  background:
+    radial-gradient(circle at 8px 50%,#2a1a0e 0 2px,#b08a5a 2.5px 3px,transparent 3.5px),
+    radial-gradient(circle at calc(100% - 8px) 50%,#2a1a0e 0 2px,#b08a5a 2.5px 3px,transparent 3.5px),
+    repeating-linear-gradient(177deg,rgba(30,14,4,.13) 0 1.5px,transparent 1.5px 7px,rgba(255,215,160,.05) 7px 8px,transparent 8px 13px),
+    linear-gradient(180deg,#8d5c36,#74472a 55%,#633b22);
+  box-shadow:0 6px 12px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,225,180,.25),inset 0 -5px 9px rgba(30,12,2,.35);
+  text-shadow:0 1px 0 rgba(40,18,4,.85)}
+/* "<owner>'s pumpkin" on one line, shrunk to fit (fitSign); only if it can't fit even small does "pumpkin" drop to a
+   second line, so the owner's name itself is never broken */
+.ownpk .board b{font-family:var(--owner-font,"Gochi Hand","Segoe Print","Bradley Hand","Comic Sans MS",cursive);font-weight:var(--owner-weight,400);
+  font-size:var(--sf,1.12rem);line-height:1.15;text-align:center;white-space:nowrap}
+.ownpk .board b span{white-space:nowrap}
+.ownpk .board b.two{white-space:normal}
+.ownpk .board small{font-size:.72rem;font-weight:750;color:#ffd58a;line-height:1.25;white-space:nowrap}
+.ownpk:hover .board,.ownpk:focus-visible .board{border-color:color-mix(in srgb,var(--accent) 75%,#3b2210)}
+.ownpk:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 70%,transparent);outline-offset:3px}
+.ownpk:active{transform:scale(.97)}
+/* the owner's note: a sign hanging in the patch, words only (textContent). Everything is drawn in CSS: ::after is
+   the hanger (a twig, two short ropes, the nails they're tied to), ::before the board under the words, so the
+   figure keeps one plain box in the flow (nothing shifts) and the ropes stay inside it (never over the tagline).
+   .welcome = weathered wood (default), .welcome.parchment = a parchment tag on twine. It hangs at -2deg and sways
+   a little from the twig (motion block); reduced motion keeps it still. */
+.welcome{--hang:26px;position:relative;isolation:isolate;margin:2px 0 0;width:fit-content;min-width:min(100%,250px);max-width:min(100%,400px);
+  padding:calc(var(--hang) + 15px) 20px 10px;transform:rotate(-2deg);transform-origin:50% 3px;
+  font-family:var(--note-font,"Gochi Hand","Segoe Print","Bradley Hand","Comic Sans MS",cursive);font-weight:var(--note-weight,400);color:#fff1d6;
+  text-shadow:0 1px 0 rgba(40,18,4,.85),0 0 6px rgba(40,18,4,.45)}
+.welcome::before{content:"";position:absolute;z-index:-1;inset:var(--hang) 0 0;border-radius:7px 10px 8px 6px;border:2px solid #3b2210;
+  background:
+    radial-gradient(circle at 16% 6px,#2a1a0e 0 2.5px,#b08a5a 3px 3.5px,transparent 4px),
+    radial-gradient(circle at 84% 6px,#2a1a0e 0 2.5px,#b08a5a 3px 3.5px,transparent 4px),
+    radial-gradient(ellipse 9% 14% at 78% 70%,rgba(40,20,6,.42),rgba(40,20,6,.12) 55%,transparent 72%),
+    radial-gradient(ellipse 6% 9% at 22% 38%,rgba(40,20,6,.3),transparent 70%),
+    linear-gradient(180deg,transparent calc(50% - 1px),rgba(30,14,4,.32) calc(50% - 1px) 50%,rgba(255,220,170,.1) 50% calc(50% + 1px),transparent calc(50% + 1px)),
+    repeating-linear-gradient(177deg,rgba(30,14,4,.13) 0 1.5px,transparent 1.5px 7px,rgba(255,215,160,.05) 7px 8px,transparent 8px 13px),
+    linear-gradient(180deg,#8d5c36,#74472a 55%,#633b22);
+  box-shadow:0 10px 20px rgba(0,0,0,.5),0 2px 4px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,225,180,.25),inset 0 -8px 14px rgba(30,12,2,.35),inset 0 0 0 1px rgba(255,220,170,.08)}
+.welcome::after{content:"";position:absolute;z-index:-2;left:0;right:0;top:0;height:calc(var(--hang) + 12px);pointer-events:none;
+  background:
+    linear-gradient(180deg,#5a3a1c,#3e2610) 50% 1px/88% 7px no-repeat,
+    repeating-linear-gradient(160deg,#d8b47a 0 2px,#8f6a3a 2px 4px) 16% 5px/3px calc(var(--hang) + 1px) no-repeat,
+    repeating-linear-gradient(160deg,#d8b47a 0 2px,#8f6a3a 2px 4px) 84% 5px/3px calc(var(--hang) + 1px) no-repeat;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.55))}
+/* 20px on desktop: Gochi Hand runs wider than Caveat did, and at 1.36rem the sample note took a 3rd line that pushed
+   Plant a seed under the fold at 1280x800 */
+.welcome blockquote{margin:0;font-size:1.25rem;line-height:1.18;overflow-wrap:anywhere;text-align:center;text-wrap:balance}
+.welcome figcaption{margin-top:2px;text-align:right;font-size:1.12rem;line-height:1.1;color:#ffd58a;
+  font-family:var(--owner-font,"Gochi Hand","Segoe Print","Bradley Hand","Comic Sans MS",cursive);font-weight:var(--owner-weight,400)}
+/* parchment: aged paper, brown ink, tied with twine */
+.welcome.parchment{color:#3a220e;text-shadow:none;padding-top:calc(var(--hang) + 18px)}
+.welcome.parchment::before{border:1px solid rgba(90,55,20,.55);border-radius:3px 6px 4px 7px;
+  background:
+    radial-gradient(circle at 50% 9px,rgba(60,35,12,.9) 0 3px,#c9a46a 3.5px 5.5px,transparent 6px),
+    radial-gradient(ellipse 30% 26% at 82% 78%,rgba(150,95,30,.22),transparent 70%),
+    radial-gradient(ellipse 22% 20% at 12% 26%,rgba(150,95,30,.18),transparent 70%),
+    radial-gradient(ellipse 75% 70% at 50% 46%,#f7ebcf 0%,#ecd9ae 58%,#d8b97e 90%,#bb904f 100%);
+  box-shadow:0 10px 20px rgba(0,0,0,.5),0 2px 4px rgba(0,0,0,.35),inset 0 0 22px rgba(120,70,15,.45),inset 0 0 4px rgba(80,45,8,.5)}
+.welcome.parchment::after{left:calc(50% - 46px);right:calc(50% - 46px);
+  background:
+    radial-gradient(circle at 50% 4px,#3a2410 0 3px,#8a6a44 3.5px 4.5px,transparent 5px),
+    linear-gradient(64deg,transparent calc(50% - 1.2px),#cfae78 calc(50% - 1.2px) calc(50% + 1.2px),transparent calc(50% + 1.2px)) 0 4px/50% calc(var(--hang) + 2px) no-repeat,
+    linear-gradient(-64deg,transparent calc(50% - 1.2px),#cfae78 calc(50% - 1.2px) calc(50% + 1.2px),transparent calc(50% + 1.2px)) 100% 4px/50% calc(var(--hang) + 2px) no-repeat}
+.welcome.parchment figcaption{color:#7a2a0c}
+html.lite .welcome::before{box-shadow:0 6px 12px rgba(0,0,0,.5)}
+@media (max-width:879px){
+  .welcome{--hang:22px;padding:calc(var(--hang) + 13px) 16px 7px;max-width:min(100%,360px)}
+  .welcome blockquote{font-size:clamp(1.25rem,5.6vw,1.42rem);line-height:1.14}
+  .welcome figcaption{font-size:1.08rem;margin-top:0}
+  .cards{gap:6px}
+  .cards .sig{padding:5px 12px 5px 6px}
+  .cards .sig img{width:44px;height:44px}
+}
+.dice{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.dice li{display:flex;align-items:center;gap:6px;font-size:.85rem;padding:4px 11px 4px 6px;border-radius:999px;background:rgba(10,8,18,.6);border:1px solid var(--line)}
+.dice li .ico{width:24px;height:24px}
+#landing .btn.primary{width:min(100%,340px);margin-top:2px}
+.links{display:flex;flex-wrap:wrap;justify-content:center;gap:0 6px}
+.linkbtn{appearance:none;background:none;border:0;color:var(--muted);text-decoration:underline;text-underline-offset:3px;
+  cursor:pointer;padding:8px 10px;font-size:.92rem;min-height:40px}
+.linkbtn:hover{color:var(--ink)}
+
+/* tier badges */
+.tier{display:inline-block;font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 9px;border-radius:999px;vertical-align:middle;white-space:nowrap}
+.tier[data-tier="Common"]{background:#2f4430;color:#cdeec0}
+.tier[data-tier="Uncommon"]{background:#174652;color:#a6eef7}
+.tier[data-tier="Rare"]{background:#35286a;color:#d2c3ff}
+.tier[data-tier="Legendary"]{background:linear-gradient(90deg,#ffe08a,#ffad3a);color:#3a1d00;box-shadow:0 0 14px rgba(255,200,90,.55)}
+.tier[data-tier="?"]{background:#2b2536;color:#cfc6dc}
+.tier[data-tier="Secret"]{background:linear-gradient(90deg,#1d1036,#3a1f66 50%,#1d1036);color:#efe3ff;box-shadow:0 0 0 1px #b48cff,0 0 16px rgba(180,140,255,.65)}
+
+/* ---------- quirks: idle life in the patch (landing only, inside .patchstage) ---------- */
+.q-vine{position:absolute;bottom:-4px;height:min(100%,320px);transform-origin:50% 100%}
+.q-vine img{height:100%;display:block;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))}
+.q-vine.l{left:-6px} .q-vine.r{right:-6px} .q-vine.r img{transform:scaleX(-1)}
+.q-sneezer{position:absolute;bottom:6px;transform-origin:50% 100%}
+.q-sneezer img{width:100%;display:block;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5))}
+.q-sneezer.a{left:7%;width:58px} .q-sneezer.b{right:8%;width:46px} .q-sneezer.c{left:27%;width:36px;bottom:3px}
+.q-puff{position:absolute;left:58%;bottom:calc(100% + 4px);font:700 .72rem/1 system-ui;color:#fff;opacity:0;white-space:nowrap;
+  background:rgba(255,255,255,.2);border-radius:999px;padding:4px 8px}
+/* the glow lies along the strip's ground and fades out before every edge of the strip (which clips its children): a
+   glow that ran past them was cut into a hard box on wide screens */
+.q-glow{position:absolute;inset:0;opacity:.5;
+  background:radial-gradient(ellipse 48% 62% at 50% 92%,color-mix(in srgb,var(--accent) 50%,transparent),transparent);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent),linear-gradient(180deg,#000 55%,transparent);-webkit-mask-composite:source-in;
+  mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent),linear-gradient(180deg,#000 55%,transparent);mask-composite:intersect}
+.q-ff{position:absolute;width:6px;height:6px;border-radius:50%;background:#fff6b0;box-shadow:0 0 10px 3px rgba(255,236,140,.8);opacity:.6}
+.q-perch{position:absolute;bottom:4px;height:min(78%,128px);aspect-ratio:var(--ar,1)}
+.q-perch img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 8px rgba(0,0,0,.55))}
+.q-owl{right:7%} .q-cat{left:6%}
+.q-lid{position:absolute;border-radius:50%;background:var(--lid,#5b3a22);transform:scaleY(0);transform-origin:50% 0}
+.q-cat .tail{transform-origin:var(--tx,20%) var(--ty,90%)}
+
+/* grow */
+#grow{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;max-width:520px;margin:0 auto;
+  min-height:calc(100vh - var(--top) - 12px);min-height:calc(100svh - var(--top) - 12px)}
+/* the plot's top margin + size are set by placePlot() so its mound sits on the scene's soil (see GROUND) */
+body.s-grow .scene-shade{opacity:.45}
+body.s-grow .scene-img{background-position:var(--fx) 75%}
+.step{margin:0;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+#growTitle{margin:0;font-size:clamp(1.4rem,6vw,1.9rem);line-height:1.15;min-height:2.3em;display:flex;align-items:center;text-shadow:0 2px 12px rgba(0,0,0,.85)}
+.plot{--base:8%;position:relative;width:min(80vw,360px,46vh);width:min(80vw,360px,46svh);aspect-ratio:1;cursor:pointer;border-radius:24px;outline:none;flex-shrink:0;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;transition:transform .08s ease-out}
+.plot.pressed{transform:scale(.965)}
+.plot:focus-visible{box-shadow:0 0 0 3px var(--accent)}
+.plot .halo{position:absolute;inset:6%;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--accent) 22%,transparent),transparent);opacity:.8}
+/* every stage's soil mound ends on the same base line (--base above the plot's bottom): --sb is where the mound ends
+   inside that drawing, --sw its width, so the plant never hops between steps */
+.plot img{position:absolute;left:0;right:0;bottom:calc(var(--base) - (1 - var(--sb,.95)) * var(--sw,84%));margin:auto;width:var(--sw,84%);height:auto;pointer-events:none;user-select:none}
+.drops{position:absolute;inset:0;pointer-events:none}
+.drop{position:absolute;top:8%;width:10px;height:16px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;background:#8fd0ff;opacity:0;box-shadow:0 0 6px #8fd0ff}
+#growCaption{margin:0;min-height:1.5em;color:var(--accent);font-weight:600;max-width:32ch;text-shadow:0 1px 10px rgba(0,0,0,.85)}
+#growBtn{width:min(100%,340px);-webkit-user-select:none;user-select:none}
+.btn.pressed{transform:scale(.97);filter:brightness(1.1)}
+/* where the seed goes: a little dug mound inside a soft glowing ring (plant step only) */
+.dig{position:absolute;left:50%;bottom:calc(var(--base) - 4.6%);width:50%;aspect-ratio:2.4;transform:translateX(-50%);pointer-events:none;display:none;transition:opacity .25s ease}
+#grow[data-phase="plant"] .dig{display:block}
+#grow.planted .dig{opacity:0}
+.dig::before{content:"";position:absolute;left:24%;right:24%;bottom:22%;height:46%;border-radius:50% 50% 42% 42%/72% 72% 28% 28%;
+  background:radial-gradient(ellipse at 50% 28%,#9a6740,#5a331b 62%,#3a2010);box-shadow:0 5px 9px rgba(0,0,0,.5),inset 0 2px 0 rgba(255,220,170,.18)}
+.dig::after{content:"";position:absolute;inset:0;border-radius:50%;border:3px solid color-mix(in srgb,var(--accent) 80%,transparent);
+  box-shadow:0 0 16px color-mix(in srgb,var(--accent) 55%,transparent),inset 0 0 14px color-mix(in srgb,var(--accent) 35%,transparent)}
+/* the attention cue after a pause: the action glows, a finger taps where to press. It never acts on its own. */
+.hand{position:absolute;left:58%;top:62%;width:54px;height:54px;color:#fff;fill:rgba(255,255,255,.92);stroke:#2a0f02;stroke-width:1.4;
+  pointer-events:none;opacity:0;transition:opacity .3s ease;filter:drop-shadow(0 3px 6px rgba(0,0,0,.6))}
+#grow[data-phase="plant"] .hand{top:70%;left:56%}
+#grow.nudge .hand{opacity:1}
+#grow.nudge #growBtn{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 55%,transparent),0 0 34px rgba(255,190,90,.7)}
+#grow.nudge .dig::after{border-color:var(--accent);box-shadow:0 0 26px var(--accent),inset 0 0 18px color-mix(in srgb,var(--accent) 50%,transparent)}
+/* the plant step's art (CFG.plant, art/fx): the dug soil with its trowel stands on the stages' soil base (--base) at
+   the seed mound's width, so nothing jumps when the seed drops in; the golden ring lies on the ground round it (its
+   front arc in front of the mound's foot, its back arc behind); the glove taps on the mound. Without the art, the
+   CSS mound / ring / SVG hand above stay. */
+.dig.art{bottom:var(--base);width:60%;aspect-ratio:640/397}
+.dig.art::before,.dig.art::after{content:none}
+.plot .dig.art img{position:absolute;margin:0;right:auto;pointer-events:none;-webkit-user-drag:none}
+.plot .dig.art .mound{left:0;bottom:0;width:100%;height:auto;filter:drop-shadow(0 5px 6px rgba(0,0,0,.45))}
+.plot .dig.art .glowring{left:-13.5%;width:127%;bottom:-27.7%;height:auto;opacity:.85;transform-origin:50% 50%}
+#grow.nudge .dig.art .glowring{opacity:1;filter:brightness(1.15) drop-shadow(0 0 10px rgba(255,200,90,.6))}
+#plot img.hand{right:auto;bottom:auto;margin:0;width:64px;height:auto;left:calc(54% - 17px);top:calc(66% - 49px);fill:none;stroke:none;filter:drop-shadow(0 3px 5px rgba(0,0,0,.55))}
+#grow[data-phase="plant"] img.hand{left:calc(56% - 17px);top:calc(70% - 49px)}
+/* three droplets that fill as you water */
+.pips{display:inline-flex;gap:9px;margin-left:6px;align-items:center}
+.pips i{display:block;width:12px;height:12px;border-radius:0 50% 50% 50%;transform:rotate(45deg);border:2px solid rgba(42,15,2,.55);background:rgba(255,255,255,.18)}
+.pips i.on{background:#3d95e6;border-color:#11365e;box-shadow:0 0 6px rgba(120,190,255,.8)}
+
+/* reveal: a hidden-rarity card that flips to the pumpkin */
+.overlay{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:16px;background:rgba(5,4,12,.8);
+  backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+#collection{padding-top:max(16px,calc(env(safe-area-inset-top) + 58px))}
+.card{position:relative;width:min(100%,390px);text-align:center;padding:20px 20px 18px;border-radius:26px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(40,30,58,.97),rgba(18,13,28,.99));border:1px solid var(--line);
+  box-shadow:0 24px 70px rgba(0,0,0,.6);transition:border-color .4s,box-shadow .4s}
+.card[data-tier="Legendary"]{border-color:#ffcf6b;box-shadow:0 0 0 1px #ffcf6b,0 0 60px rgba(255,190,80,.38),0 24px 70px rgba(0,0,0,.6)}
+.card[data-tier="Rare"]{border-color:#9b86ff;box-shadow:0 0 40px rgba(150,120,255,.28),0 24px 70px rgba(0,0,0,.6)}
+.card[data-tier="Uncommon"]{border-color:#4fc6d6}
+/* Secret: the room goes dark, the card turns to night, a ring of runes glows round the pumpkin */
+#reveal{transition:background .8s ease}
+#reveal.secret{background:rgba(0,0,0,.95)}
+.card[data-tier="Secret"]{border-color:#b48cff;background:radial-gradient(ellipse 80% 60% at 50% 38%,rgba(70,40,120,.9),rgba(10,6,22,.99) 70%);
+  box-shadow:0 0 0 1px #b48cff,0 0 90px rgba(160,110,255,.55),0 24px 70px rgba(0,0,0,.7)}
+.card[data-tier="Secret"] h2{color:#e6d6ff;text-shadow:0 0 18px rgba(190,150,255,.8)}
+.secretBanner{display:none;margin:12px auto 6px;padding:4px 12px;border-radius:999px;max-width:100%;width:max-content;
+  font:800 .74rem/1.25 system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#f3eaff;overflow-wrap:anywhere;
+  background:rgba(120,80,200,.28);border:1px solid rgba(190,150,255,.6)}
+.card[data-tier="Secret"] .secretBanner{display:block}
+.runes{position:absolute;inset:-1%;opacity:0;pointer-events:none}
+.runes svg{width:100%;height:100%;overflow:visible}
+.runes circle{fill:none;stroke:rgba(190,150,255,.45);stroke-width:1.2}
+.runes text{fill:#d9c4ff;font:13px/1 system-ui,"Segoe UI Historic","Noto Sans Runic",sans-serif;letter-spacing:2px}
+.card[data-tier="Secret"] .runes{opacity:1;filter:drop-shadow(0 0 6px rgba(190,150,255,.9))}
+.card[data-tier="Secret"] .revimg::before{content:"";position:absolute;inset:4%;border-radius:50%;background:radial-gradient(closest-side,rgba(190,150,255,.55),rgba(120,80,220,.15) 60%,transparent)}
+.card .revimg{position:relative;width:min(66vw,260px,32vh);width:min(66vw,260px,32dvh);aspect-ratio:1;margin:6px auto 2px}
+.card .revimg img{position:relative;width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 12px 18px rgba(0,0,0,.55));transition:filter .35s ease}
+.card.mystery .revimg img{filter:brightness(0) drop-shadow(0 0 10px rgba(255,255,255,.5))}
+.card h2{margin:4px 0 6px;font-family:var(--display);font-weight:400;font-size:2.3rem;line-height:1;color:var(--glow);letter-spacing:.03em;min-height:1em}
+.card p{margin:0 0 6px;color:var(--ink);overflow-wrap:anywhere}
+#revealBlurb{min-height:2.9em}
+.card.mystery #revealBlurb,.card.mystery .odds,.card.mystery .signote{visibility:hidden}
+.card .odds{font-size:.8rem;color:var(--muted)}
+.card .signote{color:var(--accent);font-size:.88rem;font-weight:700}
+.card .btn{width:100%;margin-top:10px}
+.rays{position:absolute;inset:-25%;border-radius:50%;opacity:0;pointer-events:none}
+.card[data-tier="Rare"] .rays{background:repeating-conic-gradient(from 0deg,rgba(170,140,255,.32) 0 8deg,rgba(170,140,255,0) 8deg 22deg);
+  -webkit-mask:radial-gradient(closest-side,#000 30%,transparent);mask:radial-gradient(closest-side,#000 30%,transparent)}
+.card[data-tier="Legendary"] .rays{background:repeating-conic-gradient(from 0deg,rgba(255,214,110,.45) 0 9deg,rgba(255,214,110,0) 9deg 20deg);
+  -webkit-mask:radial-gradient(closest-side,#000 34%,transparent);mask:radial-gradient(closest-side,#000 34%,transparent)}
+.ring{position:absolute;left:50%;top:50%;width:70%;aspect-ratio:1;margin:-35% 0 0 -35%;border-radius:50%;border:3px solid #7fe3ef;opacity:0;pointer-events:none}
+.burst{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none}
+.burst i{position:absolute;left:-4px;top:-4px;width:8px;height:8px;border-radius:50%;background:var(--c,#ffe39a);box-shadow:0 0 10px var(--c,#ffd36b);opacity:0}
+
+/* collection sheet */
+.sheet{position:relative;width:min(100%,720px);max-height:min(88vh,900px);max-height:min(88dvh,900px);display:flex;flex-direction:column;border-radius:24px;
+  background:linear-gradient(180deg,rgba(36,27,52,.98),rgba(16,12,26,.99));border:1px solid var(--line);box-shadow:0 24px 70px rgba(0,0,0,.6)}
+.sheet header{display:flex;align-items:flex-start;gap:12px;padding:18px 18px 10px}
+.sheet h2{margin:0;font-family:var(--display);font-weight:400;font-size:1.9rem;line-height:1.05;color:var(--accent)}
+.sheet header p{margin:4px 0 0;color:var(--muted);font-size:.86rem}
+.sheet header p.luck{color:var(--accent);font-weight:600}
+.sheet .x{margin-left:auto;flex-shrink:0}
+.grid{list-style:none;margin:0;padding:6px 14px 18px;overflow:auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.grid li{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;padding:8px 4px 10px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid var(--line)}
+.grid li.sig{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+/* every pumpkin drawing has its own empty margin (Cinderella is wide and flat, the giant fills its frame): each one is
+   cropped to its visible pixels (alpha bounding box, measured once it loads) and fitted into the same box, centred,
+   standing on one baseline. --w / --l / --t are set by fitThumb(). */
+.grid .thumb{position:relative;display:block;width:76%;aspect-ratio:1;overflow:hidden}
+.grid .thumb img{position:absolute;left:var(--l,0%);top:var(--t,0%);width:var(--w,100%);height:auto;max-width:none}
+.grid .thumb img:not([data-fit]){inset:0;width:100%;height:100%;object-fit:contain}
+/* the text rows line up across a row of cards: every card has the same box for its picture and a two-line slot for
+   its name (a one-line name sits in the middle of it), so the badges and odds land on the same lines */
+.grid li > b{display:flex;align-items:center;justify-content:center;height:calc(2 * 1.15em)}
+.grid b{font-size:.86rem;line-height:1.15}
+.grid .tier{font-size:.62rem;padding:2px 7px}
+.grid small{color:var(--muted);font-size:.78rem}
+.grid .star{position:absolute;top:6px;right:8px;color:var(--accent);font-size:.9rem;line-height:1}
+.grid li.secret{border-color:rgba(180,140,255,.7);background:radial-gradient(ellipse at 50% 35%,rgba(110,70,190,.35),rgba(20,12,36,.6))}
+.grid li.secret img.sil{filter:brightness(0) drop-shadow(0 0 6px rgba(190,150,255,.85))}
+.grid li.secret small{color:#d9c4ff}
+
+/* carve / view: the patch's scene stays behind (darkened + blurred) and its name stays on top */
+#work{flex:1;display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"tag" "head" "vhead" "stage" "panel";
+  justify-items:center;align-content:start;row-gap:10px;min-height:calc(100vh - var(--top) - 100px);min-height:calc(100svh - var(--top) - 100px)}
+body.lit #work,body.s-view #work{align-content:center}
+.patchTag{grid-area:tag;margin:0;font-family:var(--display);font-size:1.35rem;line-height:1.1;color:var(--accent);text-align:center;
+  letter-spacing:.04em;text-shadow:0 2px 10px rgba(0,0,0,.8);overflow-wrap:anywhere;max-width:calc(100% - 56px)}
+.carveHead{grid-area:head;margin:0;text-align:center;font-size:1.05rem;display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;justify-content:center}
+.carveHead b{font-size:1.25rem}
+.carveHead .star{color:var(--accent);font-size:.85rem;font-weight:700}
+#viewHead{grid-area:vhead;text-align:center;margin:0;font-size:1.25rem;font-weight:650;opacity:0;transition:opacity 1.2s ease .2s;max-width:30ch;overflow-wrap:anywhere}
+#viewHead .name{color:var(--glow)}
+#viewHead .tier{font-size:.78rem;margin:0 2px}
+body.ignited #viewHead{opacity:1}
+/* carve vs scroll: the stage lets the page pan vertically (pan-y). A touch that starts ON the pumpkin's body is
+   claimed by the carve handler (touchstart preventDefault) and carves; one that starts on the clear corners of the
+   stage, or the 5vw gutters either side, scrolls the page. See ownsTouch() for the edge-flick rule. */
+.stage{grid-area:stage;position:relative;width:min(90vw,440px,max(240px,calc(100vh - 345px)));width:min(90vw,440px,max(240px,calc(100svh - 345px)));aspect-ratio:1/1;touch-action:pan-y}
+body.lit .stage{width:min(90vw,470px,max(260px,calc(100vh - 370px)));width:min(90vw,470px,max(260px,calc(100svh - 370px)))}
+body.s-view .stage{width:min(90vw,470px,56vh);width:min(90vw,470px,56svh)}
+.spill{position:absolute;inset:-34%;pointer-events:none;opacity:0;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(255,176,80,.42),rgba(255,130,40,.16) 45%,rgba(255,110,30,0) 100%)}
+canvas#c{position:relative;display:block;width:100%;height:100%;touch-action:pan-y;cursor:crosshair}
+body.s-view canvas#c{cursor:default}
+/* text selection box (move / resize / rotate / remove) */
+.tbox{position:absolute;left:0;top:0;border:2px dashed rgba(255,226,170,.9);border-radius:8px;cursor:move;touch-action:none;
+  box-shadow:0 0 0 1px rgba(0,0,0,.35);transform-origin:50% 50%}
+.tbox [data-h]{position:absolute;width:30px;height:30px;border-radius:50%;border:2px solid #2a0f02;background:#ffd9a0;display:grid;place-items:center;
+  font:700 15px/1 system-ui;color:#2a0f02;padding:0;touch-action:none;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+.tbox [data-h="rot"]{left:50%;top:-44px;margin-left:-15px;cursor:grab}
+.tbox [data-h="rot"]::after{content:"";position:absolute;left:50%;top:28px;width:2px;height:14px;background:rgba(255,226,170,.9)}
+.tbox [data-h="size"]{right:-17px;bottom:-17px;cursor:nwse-resize}
+.tbox [data-h="del"]{right:-17px;top:-17px;cursor:pointer;background:#ffb4a0}
+.tbox [data-h] .i{width:16px;height:16px;stroke-width:2.4}
+.panel{grid-area:panel;width:min(100%,440px);display:flex;flex-direction:column;gap:8px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.chip{appearance:none;border:1px solid var(--line);background:var(--chip);color:var(--ink);
+  border-radius:999px;padding:7px 12px;font-size:.9rem;cursor:pointer;min-height:36px;
+  transition:background .15s,border-color .15s,transform .1s}
+.chip:hover{border-color:rgba(242,138,46,.6)}
+.chip:active{transform:scale(.96)}
+.chip[aria-pressed="true"]{background:var(--chip-on);border-color:var(--pumpkin);color:#ffe2c2}
+.chip:disabled{opacity:.4;cursor:default}
+.chip.brush{width:44px;min-height:40px;padding:0;display:grid;place-items:center}
+.chip.brush i{display:block;border-radius:50%;background:currentColor}
+.spacer{flex:1}
+/* carve tools: one compact row (tabs + undo / clear), then ONE fixed-height pane for the active tool */
+.tools{display:flex;align-items:center;gap:6px}
+.tabs{flex:1;min-width:0;display:flex;padding:3px;gap:2px;border-radius:14px;background:rgba(0,0,0,.4);border:1px solid var(--line)}
+.tab{flex:1;min-width:0;appearance:none;border:0;background:none;color:var(--muted);font:650 .92rem/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  height:38px;border-radius:11px;cursor:pointer;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .15s,color .15s}
+.tab[aria-selected="true"]{background:var(--chip-on);color:#ffe2c2;box-shadow:inset 0 0 0 1px var(--pumpkin)}
+.tab:focus-visible,.iconbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iconbtn{appearance:none;width:44px;height:44px;flex-shrink:0;border-radius:12px;border:1px solid var(--line);background:var(--chip);color:var(--ink);
+  display:grid;place-items:center;padding:0;cursor:pointer;transition:background .15s,border-color .15s,transform .1s}
+.iconbtn .i{width:21px;height:21px}
+.iconbtn:hover{border-color:rgba(242,138,46,.6)}
+.iconbtn:active{transform:scale(.94)}
+.iconbtn:disabled{opacity:.35;cursor:default}
+.panes{position:relative;height:66px}
+.pane{position:absolute;inset:0;display:flex;align-items:center;gap:8px}
+.panehint{margin:0;flex:1;min-width:0;color:var(--muted);font-size:.86rem;line-height:1.25;text-align:right}
+/* one horizontally scrolling row of fixed-size chips: the pane keeps its height, nothing reflows as thumbnails arrive */
+.stencils{display:flex;gap:6px;width:100%;height:100%;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;
+  overscroll-behavior-x:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent)}
+.stencils::-webkit-scrollbar{display:none}
+.stencils .chip{flex:0 0 64px;width:64px;height:100%;scroll-snap-align:start;padding:4px 2px 5px;font-size:.74rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:12px;min-width:0}
+.stencils .chip img{width:32px;height:32px;object-fit:contain}
+.stencils .chip > span{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ownerStencil{border-color:color-mix(in srgb,var(--accent) 60%,transparent)}
+.ownerStencil b{font-weight:700}
+.textfield{position:relative;flex:1;min-width:0}
+.textfield input,.field input{font:inherit;font-size:16px;color:var(--ink);background:rgba(0,0,0,.36);border:1px solid var(--line);border-radius:12px;
+  padding:9px 56px 9px 12px;height:46px;width:100%}
+.textfield input:focus,.field input:focus{outline:2px solid var(--pumpkin);outline-offset:1px}
+.textfield em,.field em{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-style:normal;font-size:.75rem;color:var(--muted);
+  width:3.4em;text-align:right;font-variant-numeric:tabular-nums;pointer-events:none}
+#addText{min-height:46px;display:flex;align-items:center;gap:6px;white-space:nowrap;border-radius:12px}
+/* after lighting: name + message, then send */
+.lithead{margin:0;text-align:center;color:var(--glow);font-weight:650;font-size:.98rem}
+.fields{display:grid;grid-template-columns:1fr;gap:8px}
+.field{position:relative;display:block}
+.btn{appearance:none;border:0;border-radius:16px;font-weight:700;cursor:pointer;min-height:52px;
+  padding:12px 18px;font-size:1.1rem;transition:transform .08s,filter .15s,box-shadow .2s;text-align:center;text-decoration:none;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;-webkit-user-select:none;user-select:none}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:linear-gradient(180deg,#ffa24a,var(--pumpkin-dark));color:#2a0f02;
+  box-shadow:0 6px 24px rgba(242,138,46,.35),inset 0 1px 0 rgba(255,255,255,.35)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.glowing{background:linear-gradient(180deg,#ffe3a0,#ffbc57);box-shadow:0 0 32px rgba(255,210,122,.5)}
+.btn.ghost{background:rgba(10,8,18,.45);color:var(--ink);border:1px solid var(--line);font-weight:600;font-size:1rem;min-height:48px;line-height:24px}
+.btn.ghost:hover{border-color:color-mix(in srgb,var(--accent) 60%,transparent)}
+.btn.story{background:linear-gradient(135deg,#6f3ce0,#c8327c 55%,#ef9a3c);color:#fff;font-size:1rem;padding:12px 12px;
+  box-shadow:0 6px 22px rgba(200,50,124,.35),inset 0 1px 0 rgba(255,255,255,.25)}
+.btn .i{width:1.25em;height:1.25em}
+body.lit .carve-only{display:none}
+.lit-only{display:none!important}
+body.lit .lit-only{display:flex!important}
+#sendBox{flex-direction:column;gap:8px}
+/* the main action stays in reach: a bar stuck to the bottom of the screen, clear of the home indicator */
+.actionbar{position:sticky;bottom:0;z-index:6;display:flex;flex-direction:column;gap:6px;margin:0 -16px;
+  padding:10px 16px max(10px,env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--bg) 82%,transparent) 26%,color-mix(in srgb,var(--bg) 92%,transparent))}
+body.lit .actionbar{position:static;margin:0;padding:0;background:none}
+.sendrow{gap:8px}
+.sendrow #send{flex:1;min-width:0}
+.result{flex-direction:column;gap:6px}
+#sendMsg{margin:0;min-height:1.4em;text-align:center;color:var(--glow);font-weight:650;line-height:1.35}
+.linkrow{display:flex;align-items:center;gap:6px;height:50px;padding:0 3px 0 12px;border-radius:12px;background:rgba(0,0,0,.42);border:1px solid var(--line)}
+#linkOut{flex:1;min-width:0;font:16px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;color:#e9dfcc;background:none;border:0;padding:0;outline:none;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.linkrow:focus-within{outline:2px solid var(--pumpkin);outline-offset:1px}
+.linkrow .iconbtn{width:42px;height:42px;border-radius:10px}
+#err{margin:0;color:#ffb4a0;font-size:.92rem;text-align:center;min-height:1.3em}
+#err:empty{min-height:0}
+#msgLine{margin:0 0 4px;text-align:center;font-size:1.2rem;font-style:italic;color:#ffe9c4;opacity:0;transition:opacity 1.2s ease .5s;overflow-wrap:anywhere}
+body.ignited #msgLine{opacity:1}
+/* where the pumpkin was grown: a small farm badge under the sender's message (the message stays the hero). A plank
+   of the welcome sign's wood with the scene as a framed thumbnail, the patch name in its display face, the owner in
+   theirs, and "Visit this patch" (the whole badge opens the patch root). It fades in with the light, but its box is
+   there from the start, so nothing moves. */
+.farm{display:grid;grid-template-columns:64px minmax(0,1fr);align-items:center;gap:12px;width:min(100%,380px);margin:2px auto 4px;
+  padding:9px 14px 9px 9px;border-radius:12px;border:2px solid #3b2210;color:#fff1d6;text-decoration:none;text-align:left;
+  background:
+    radial-gradient(ellipse 9% 30% at 90% 70%,rgba(40,20,6,.35),transparent 72%),
+    repeating-linear-gradient(177deg,rgba(30,14,4,.13) 0 1.5px,transparent 1.5px 7px,rgba(255,215,160,.05) 7px 8px,transparent 8px 13px),
+    linear-gradient(180deg,#7d5030,#663f25 55%,#56331d);
+  box-shadow:0 8px 18px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,225,180,.22),inset 0 -6px 12px rgba(30,12,2,.3);
+  text-shadow:0 1px 0 rgba(40,18,4,.85);opacity:0;transition:opacity 1.2s ease .7s,transform .12s,border-color .15s}
+body.ignited .farm{opacity:1}
+.farm:hover,.farm:focus-visible{border-color:color-mix(in srgb,var(--accent) 75%,#3b2210);outline:none}
+.farm:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 60%,transparent),0 8px 18px rgba(0,0,0,.45)}
+.farm:active{transform:scale(.98)}
+.farm-pic{width:64px;height:64px;border-radius:9px;border:3px solid #2a1709;box-shadow:0 0 0 1px #c9a35a,0 3px 6px rgba(0,0,0,.45);
+  background:var(--bg) var(--farm-pic,none) var(--fx,50%) 62%/cover no-repeat}
+.farm-txt{display:flex;flex-direction:column;min-width:0;gap:1px}
+.farm-k{font-size:.68rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#f0c98f;line-height:1.2}
+.farm-name{font-family:var(--name-font,var(--display));font-weight:var(--name-weight,400);font-size:1.12rem;line-height:1.1;color:#ffd27a;
+  overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.cjk-name .farm-name{font-size:1rem;letter-spacing:.02em}
+.farm-owner{font-family:var(--owner-font,"Gochi Hand","Segoe Print","Bradley Hand","Comic Sans MS",cursive);font-weight:var(--owner-weight,400);
+  font-size:1.14rem;line-height:1.1;color:#fff1d6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.farm-owner.script{font-size:.95rem;line-height:1.25}
+.farm-go{margin-top:2px;font-size:.84rem;font-weight:750;color:#ffd58a;line-height:1.2}
+#viewPanel .btn{opacity:0;transform:translateY(6px);transition:opacity .8s ease .9s,transform .8s ease .9s}
+body.ignited #viewPanel .btn{opacity:1;transform:none}
+
+footer{position:relative;z-index:2;text-align:center;font-size:.8rem;color:var(--muted);padding:10px 16px max(14px,env(safe-area-inset-bottom))}
+footer p{margin:2px 0}
+footer a{color:#ffc58a;text-decoration:none;border-bottom:1px solid rgba(255,197,138,.35)}
+footer a:hover{border-bottom-color:#ffc58a}
+#footId{overflow-wrap:anywhere}
+
+/* ---------- desktop ---------- */
+@media (min-width:880px){
+  .patchstage{min-height:150px}
+  .q-sneezer.a{left:14%;width:74px} .q-sneezer.b{right:14%;width:60px} .q-sneezer.c{left:24%;width:44px}
+  .q-owl{right:12%} .q-cat{left:12%}
+  .grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+  #work{grid-template-columns:auto minmax(320px,400px);column-gap:56px;align-content:center;
+    grid-template-areas:"stage ." "stage tag" "stage head" "stage vhead" "stage panel" "stage .";grid-template-rows:1fr auto auto auto auto 1fr}
+  .stage,body.lit .stage,body.s-view .stage{width:min(52vw,calc(100vh - 130px),620px);width:min(52vw,calc(100svh - 130px),620px);align-self:center}
+  .patchTag{justify-self:stretch;text-align:left;font-size:1.6rem;max-width:none}
+  .carveHead{justify-content:flex-start;justify-self:stretch;text-align:left}
+  #viewHead{justify-self:stretch;text-align:left;font-size:1.6rem;max-width:none}
+  #msgLine{text-align:left;font-size:1.4rem}
+  .farm{margin:2px 0 4px}
+  .panel{width:100%;align-self:start}
+  #err{text-align:left}
+  .actionbar{position:static;margin:0;padding:0;background:none}
+  .plot{width:min(40vw,420px,50vh);width:min(40vw,420px,50svh)}
+}
+
+/* ---------- motion: everything that moves on its own lives here ---------- */
+@media (prefers-reduced-motion:no-preference){
+  .ownpk canvas{animation:ownGlow 3.1s ease-in-out infinite alternate}
+  .ownpk .board{animation:stakebob 4.2s ease-in-out infinite;transform-origin:50% 100%}
+  @keyframes ownGlow{0%{filter:drop-shadow(0 0 8px rgba(255,170,60,.55)) drop-shadow(0 4px 6px rgba(0,0,0,.55))}45%{filter:drop-shadow(0 0 13px rgba(255,180,70,.8)) drop-shadow(0 4px 6px rgba(0,0,0,.55))}60%{filter:drop-shadow(0 0 10px rgba(255,160,55,.62)) drop-shadow(0 4px 6px rgba(0,0,0,.55))}100%{filter:drop-shadow(0 0 14px rgba(255,185,80,.85)) drop-shadow(0 4px 6px rgba(0,0,0,.55))}}
+  @keyframes stakebob{0%,100%{transform:none}50%{transform:translateY(-2px) rotate(1.5deg)}}
+  .q-vine.l{animation:sway 3.6s ease-in-out infinite alternate}
+  .q-vine.r{animation:sway 4.4s ease-in-out -1.3s infinite alternate}
+  @keyframes sway{from{transform:rotate(-4deg)}to{transform:rotate(5deg)}}
+  .q-vine.r{animation-name:swayR}
+  @keyframes swayR{from{transform:rotate(4deg)}to{transform:rotate(-5deg)}}
+  .q-sneezer{animation:sneeze 7s ease-in-out infinite}
+  .q-sneezer .q-puff{animation:puff 7s ease-out infinite}
+  .q-sneezer.b,.q-sneezer.b .q-puff{animation-delay:-2.4s} .q-sneezer.c,.q-sneezer.c .q-puff{animation-delay:-4.8s}
+  @keyframes sneeze{0%,72%,100%{transform:none}76%{transform:scale(1.04,.9)}80%{transform:translateY(-10px) scale(.96,1.08) rotate(-4deg)}86%{transform:translateY(0) scale(1.06,.94)}92%{transform:none}}
+  @keyframes puff{0%,78%{opacity:0;transform:none}82%{opacity:1;transform:translate(3px,-2px)}96%,100%{opacity:0;transform:translate(8px,-8px) scale(1.1)}}
+  .welcome{animation:signsway 5.5s ease-in-out infinite alternate}
+  @keyframes signsway{from{transform:rotate(-2.8deg)}to{transform:rotate(-1.2deg)}}
+  .q-ff{animation:qfloat 6s ease-in-out infinite alternate,pulse 2.4s ease-in-out infinite alternate}
+  @keyframes qfloat{from{transform:translate(0,0)}to{transform:translate(16px,-22px)}}
+  @keyframes pulse{from{opacity:.15}to{opacity:.9}}
+  .q-glow{animation:pulse 4s ease-in-out infinite alternate}
+  .q-owl{animation:owltilt 5s ease-in-out infinite}
+  .q-owl .q-lid{animation:blink 5s linear infinite}
+  @keyframes owltilt{0%,40%,100%{transform:none}48%,62%{transform:rotate(-7deg)}70%{transform:rotate(3deg)}78%{transform:none}}
+  @keyframes blink{0%,20%,26%,84%,90%,100%{transform:scaleY(0)}22%,24%,86%,88%{transform:scaleY(1)}}
+  .q-cat .tail{animation:flick 6s ease-in-out infinite}
+  .q-cat.notail{animation:twitch 6s ease-in-out infinite;transform-origin:50% 100%}
+  @keyframes twitch{0%,55%,100%{transform:none}60%{transform:skewX(-3deg)}66%{transform:skewX(2deg)}72%{transform:none}}
+  .q-owl.nolids{animation:owltilt 5s ease-in-out infinite,squint 5s linear infinite}
+  @keyframes squint{0%,20%,26%,100%{scale:1 1}23%{scale:1.03 .93}}
+  @keyframes flick{0%,55%,100%{transform:none}62%{transform:rotate(-14deg)}68%{transform:rotate(8deg)}74%{transform:rotate(-10deg)}82%{transform:rotate(3deg)}88%{transform:none}}
+  .ev-moon{animation:moonrise 3.2s cubic-bezier(.2,.7,.2,1) both}
+  .ev-moon .halo{animation:pulse 3.5s ease-in-out 3s infinite alternate}
+  @keyframes moonrise{from{transform:translateY(40vh) scale(.7);opacity:0}to{transform:none;opacity:1}}
+  .ev-crow{animation:crow 6s ease-in-out both}
+  .ev-crow img{animation:flap .24s ease-in-out infinite alternate;transform-origin:50% 45%}
+  .ev-crow .caw{animation:caw 6s ease both}
+  @keyframes crow{0%{transform:translate(-140px,-30px)}32%{transform:translate(calc(55vw - 60px),8vh)}40%,60%{transform:translate(calc(55vw - 60px),6vh)}100%{transform:translate(calc(100vw + 90px),-16vh)}}
+  @keyframes flap{from{transform:scaleY(1)}to{transform:scaleY(.78) translateY(3%)}}
+  @keyframes caw{0%,36%{opacity:0}40%,58%{opacity:1}62%,100%{opacity:0}}
+  .ev-cloud{animation:drift var(--d,60s) ease-in-out var(--dl,0s) infinite alternate}
+  @keyframes drift{from{transform:translateX(calc(-1 * var(--dx,20px)))}to{transform:translateX(var(--dx,20px))}}
+  .ev-star{animation:shoot 1.3s ease-in both}
+  @keyframes shoot{0%{opacity:0;transform:translate(0,0) rotate(var(--a)) scaleX(.2)}15%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--a)) scaleX(1)}}
+  .ev-ff{animation:ffdrift var(--dur) ease-in-out var(--dl) infinite alternate,fadein 1.5s ease-out both}
+  .ev-ff i{animation:twinkle var(--tw) ease-in-out infinite alternate}
+  @keyframes ffdrift{0%{transform:translate(0,0)}50%{transform:translate(var(--x1),var(--y1))}100%{transform:translate(var(--x2),var(--y2))}}
+  @keyframes twinkle{from{opacity:.25}to{opacity:1}}
+  @keyframes fadein{from{opacity:0}}
+  .ev-ghost{animation:parade var(--dur) linear var(--dl) infinite both}
+  .ev-ghost img{animation:bob 1.9s ease-in-out infinite alternate}
+  @keyframes parade{from{transform:translateX(-30vw)}to{transform:translateX(125vw)}}
+  @keyframes bob{from{transform:translateY(-9px) rotate(-5deg)}to{transform:translateY(9px) rotate(5deg)}}
+  #grow[data-phase="plant"] .dig::after{animation:digglow 1.8s ease-in-out infinite}
+  @keyframes digglow{0%,100%{opacity:.55;transform:scale(.95)}50%{opacity:1;transform:scale(1.05)}}
+  #grow.nudge #growBtn{animation:nudge 1.2s ease-in-out infinite}
+  @keyframes nudge{0%,100%{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent),0 0 14px rgba(255,190,90,.35)}50%{box-shadow:0 0 0 7px color-mix(in srgb,var(--accent) 50%,transparent),0 0 40px rgba(255,190,90,.8)}}
+  #grow.nudge .hand{animation:tap 1.2s ease-in-out infinite}
+  #grow[data-phase="plant"] .dig.art .glowring{animation:ringpulse 2s ease-in-out infinite}
+  #grow.nudge .dig.art .glowring{animation-duration:1.2s}
+  @keyframes ringpulse{0%,100%{opacity:.6;transform:scale(.96)}50%{opacity:1;transform:scale(1.03)}}
+  #grow.nudge img.hand{animation:taphand 1.2s ease-in-out infinite}
+  @keyframes taphand{0%,100%{transform:none}40%{transform:translate(6px,-10px) rotate(4deg)}62%{transform:translate(-1px,2px) scale(.94)}}
+  @keyframes tap{0%,100%{transform:none}45%{transform:translate(-4px,-14px) rotate(-6deg)}62%{transform:scale(.9)}}
+  .pips i.on{animation:pip .35s cubic-bezier(.2,1.6,.4,1)}
+  @keyframes pip{from{transform:rotate(45deg) scale(.3)}to{transform:rotate(45deg)}}
+  .plot img.pop{animation:pop .55s cubic-bezier(.2,1.6,.4,1) both}
+  @keyframes pop{from{transform:scale(.4) translateY(20%);opacity:0}to{transform:none;opacity:1}}
+  .plot img.drop-in{animation:dropin .55s cubic-bezier(.3,1.4,.5,1) both}
+  @keyframes dropin{from{transform:translateY(-60%);opacity:0}to{transform:none;opacity:1}}
+  .plot img.ready{animation:ready 1.2s ease-in-out infinite}
+  @keyframes ready{0%,100%{transform:none}50%{transform:translateY(-3%) rotate(1.5deg)}}
+  .drop{animation:fall .7s ease-in both}
+  @keyframes fall{from{opacity:0;transform:translateY(0)}20%{opacity:1}to{opacity:0;transform:translateY(190px)}}
+  .overlay .card,.overlay .sheet{animation:cardin .45s cubic-bezier(.2,1.3,.4,1) both}
+  @keyframes cardin{from{transform:translateY(30px) scale(.9);opacity:0}to{transform:none;opacity:1}}
+  .card.mystery .revimg img{animation:wobble .5s ease-in-out infinite alternate}
+  @keyframes wobble{from{transform:rotate(-4deg) scale(.97)}to{transform:rotate(4deg) scale(1.02)}}
+  .card.flip .revimg img{animation:reveal .6s cubic-bezier(.2,1.6,.4,1) both}
+  @keyframes reveal{from{transform:scale(.6)}to{transform:none}}
+  .card.flip .burst i{animation:spark 1.3s ease-out both}
+  @keyframes spark{0%{opacity:1;transform:rotate(var(--a)) translateX(0) scale(1)}100%{opacity:0;transform:rotate(var(--a)) translateX(var(--d)) scale(.3)}}
+  .card.flip[data-tier="Uncommon"] .ring{animation:ring 1s ease-out both}
+  @keyframes ring{from{opacity:.9;transform:scale(.4)}to{opacity:0;transform:scale(1.5)}}
+  .card.flip[data-tier="Rare"] .rays,.card.flip[data-tier="Legendary"] .rays{animation:rays 9s linear infinite,raysin .8s ease-out both}
+  .card.flip[data-tier="Secret"] .runes{animation:rays 24s linear infinite,runein 1.6s ease-out both}
+  @keyframes runein{0%{opacity:0;transform:scale(.6)}60%{opacity:1}100%{opacity:1;transform:none}}
+  .card.flip[data-tier="Secret"] .revimg::before{animation:pulse 2.2s ease-in-out infinite alternate}
+  .card.flip[data-tier="Secret"] .secretBanner{animation:raysin 1.2s ease-out .5s both}
+  @keyframes rays{to{rotate:360deg}}
+  @keyframes raysin{from{opacity:0}to{opacity:1}}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition:none!important;animation:none!important}
+  .card[data-tier="Rare"] .rays,.card[data-tier="Legendary"] .rays{opacity:.8}
+}
+
+/* ---- endscreen ---- after lighting: one primary (Send to a friend), then Share to Story and Save video side by
+   side, Grow another, "Blow it out", and a quieter "make your own patch" card. No sheet: Story is one tap (its picture
+   is drawn as soon as the pumpkin is lit), the video records on its own button (a progress ring over its icon). */
+#esMore,#esOwn{display:none}
+body.lit #esMore{display:grid}
+body.lit #esOwn{display:flex}
+.es-more{grid-template-columns:1fr 1fr;gap:8px;scroll-margin-bottom:12px}
+.es-more .btn{min-width:0;min-height:50px;padding:10px 8px;font-size:1rem;white-space:nowrap}
+.es-more .btn .i{width:1.2em;height:1.2em}
+.es-more .btn > span:last-child{overflow:hidden;text-overflow:ellipsis}
+.es-more .es-again{grid-column:1/-1;min-height:46px}
+/* 360-379 px phones: Safari sets "Share to Story" a little wider than Chrome; tighter so neither label is cut */
+@media (max-width:379px){.es-more .btn{font-size:.95rem;padding:10px 4px;gap:5px}.es-more .btn img.ui-art{width:1.45em;height:1.45em}}
+@media (max-width:339px){#storyLabel .long{display:none}}
+.es-more .btn[aria-busy="true"]{cursor:progress}
+.es-more .btn:disabled{opacity:.5;cursor:default;transform:none}
+/* the video button's icon carries the recording ring, in the same box: recording never moves anything */
+.es-vicon{position:relative;display:inline-grid;place-items:center;width:1.6em;height:1.6em;flex-shrink:0}
+.es-ring{position:absolute;inset:-3px;width:calc(100% + 6px);height:calc(100% + 6px);transform:rotate(-90deg);opacity:0;pointer-events:none}
+.es-ring circle{fill:none;stroke:rgba(255,255,255,.22);stroke-width:4}
+.es-ring .bar{stroke:var(--accent);stroke-linecap:round;stroke-dasharray:119.38;stroke-dashoffset:119.38}
+#esVideo[data-state="rec"] .es-ring,#esVideo[data-state="prep"] .es-ring{opacity:1}
+#esVideo[data-state="rec"] .es-vicon > :first-child,#esVideo[data-state="prep"] .es-vicon > :first-child{opacity:.45;transform:scale(.7)}
+#esVideo[data-state="ready"]{border-color:color-mix(in srgb,var(--accent) 75%,transparent);background:color-mix(in srgb,var(--accent) 16%,rgba(10,8,18,.45));color:var(--glow)}
+#esVideo[data-state="saved"]{color:var(--glow)}
+.minor{justify-content:center;flex-wrap:wrap;gap:0 4px}
+body.lit .minor{margin-top:-2px}
+.es-own{flex-direction:column;align-items:flex-start;gap:4px;margin-top:14px;padding:14px 16px 16px;border-radius:18px;text-align:left;
+  background:rgba(10,8,18,.5);border:1px dashed color-mix(in srgb,var(--accent) 42%,transparent);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.es-own p{margin:0}
+.es-own-t{font-weight:700;font-size:1.02rem;color:var(--ink)}
+.es-own-s{color:var(--muted);font-size:.9rem;line-height:1.35}
+.es-own .btn{margin-top:8px;min-height:44px;padding:9px 18px;font-size:.98rem}
+/* toast: in its own slot above the share row (two lines tall, always reserved after lighting), on a solid pill */
+.toastslot{height:2.9rem;align-items:center;justify-content:center;margin:-2px 0 2px}
+.toast{margin:0;max-width:100%;padding:5px 14px;border-radius:12px;text-align:center;font-size:.88rem;font-weight:650;line-height:1.25;
+  color:#2a0f02;background:#ffd88a;box-shadow:0 4px 14px rgba(0,0,0,.45);opacity:0;transition:opacity .25s ease;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.toast.on{opacity:1}
+.toast:empty{visibility:hidden}
+/* the recorder's canvas: in the page (Safari only captures attached canvases) but never seen */
+.es-rec{position:fixed;left:-20000px;top:0;width:12px;height:21px;opacity:0;pointer-events:none}
+@media (min-width:880px){ .es-own{margin-top:18px} }
+/* ---- /endscreen ---- */
+/* ---- ui icons ---- sticker art (art/ui/<name>.webp, listed in CFG.ui by build.mjs) replaces the SVG fallback of the
+   same name; see ICONS in the script. Art reads a little larger than a line icon at the same box. */
+img.ui-art{object-fit:contain;fill:none;stroke:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45));-webkit-user-drag:none;pointer-events:none}
+img.i.ui-art{width:1.5em;height:1.5em;vertical-align:-.36em}
+.btn img.ui-art,.es-more .btn img.ui-art{width:1.6em;height:1.6em;margin:-.2em 0}
+.linkbtn img.ui-art{width:1.5em;height:1.5em}
+.iconbtn img.ui-art{width:30px;height:30px}
+.linkrow .iconbtn img.ui-art{width:28px;height:28px}
+.es-tile:has(img.ui-art){background:rgba(255,255,255,.07)}
+.es-tile img.ui-art{width:42px;height:42px}
+/* tiny handles on a carved word: a sticker needs a dark round backing to read at 30 px */
+.tbox [data-h]:has(img.ui-art){background:#2a0f02;border-color:#ffd9a0}
+.tbox [data-h] img.ui-art{width:20px;height:20px}
+.mute .ui-art{display:none;width:28px;height:28px}
+.mute.art svg{display:none}
+.mute.art[aria-pressed="false"] .ui-art.on,.mute.art[aria-pressed="true"] .ui-art.off{display:block}
+/* ---- /ui icons ---- */
+/* ---- lite quality ---- no blur filters: the glass panels get a darker fill instead, the backdrop is only dimmed */
+html.lite .mute,html.lite .sig,html.lite .overlay,html.lite .es-own{backdrop-filter:none;-webkit-backdrop-filter:none}
+html.lite .mute{background:rgba(8,6,16,.88)} html.lite .sig{background:rgba(10,8,18,.82)}
+html.lite .overlay{background:rgba(5,4,12,.9)} html.lite .es-own{background:rgba(10,8,18,.8)}
+html.lite body.s-carve .scene-img,html.lite body.s-view .scene-img{filter:brightness(.55) saturate(.85)}
+html.lite body.dark .scene-img{filter:brightness(.36) saturate(.8)}
+/* ---- /lite quality ---- */
+/* ---- fog ---- */
+/* Ground mist (Identity V mood). Drop-in pair: this CSS block + the "fog" block at the end of the page script.
+   The script builds every layer itself, so no markup changes:
+   - .fog-tint / .fog-lift inside .scene: the colour grade (desaturate, cool teal, lifted blacks) on the backdrop only
+   - .fog (canvas + vignette) between .scene and the weather layer: under the page text, pumpkins and weather sprites.
+   Nothing here takes input (pointer-events:none) and nothing animates in CSS. */
+/* the grade is kept light (about half of a full Identity V grade) so the scene art reads clearly through it;
+   the script scales every part of it by ?fogk (--fog-k, default 1) */
+body.fog-on .scene{filter:saturate(var(--fog-sat,.87)) contrast(var(--fog-con,.975))}
+.fog-tint,.fog-lift{position:absolute;inset:0;pointer-events:none}
+.fog-tint{background:var(--fog-tint,#3c6f78);mix-blend-mode:soft-light;opacity:calc(.21 * var(--fog-k,1))}
+.fog-lift{background:var(--fog-lift,#111a22);mix-blend-mode:lighten;opacity:min(1,calc(.5 * var(--fog-k,1)))}
+/* the carve / view backdrop is already dimmed and blurred: lift it less, so the page text keeps its contrast */
+body.s-carve .fog-lift,body.s-view .fog-lift{opacity:min(1,calc(.18 * var(--fog-k,1)))}
+.fog{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+.fog canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+/* deep cinematic vignette, over the mist so the corners sink; it only ever darkens */
+.fog-vig{position:absolute;inset:0;
+  background:radial-gradient(ellipse 92% 80% at 50% 44%,rgba(2,4,9,0) 48%,rgba(2,4,9,.38) 78%,rgba(1,2,6,.72) 100%);opacity:min(1,calc(.6 * var(--fog-k,1)))}
+/* ---- /fog ---- */
