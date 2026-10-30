@@ -21,7 +21,9 @@ If the user has no VibeHost account yet, point them at <https://vibehost.com/sig
 
 ## Setup
 
-Install the CLI by downloading the installer, reviewing it, then running it — don't pipe it straight into a shell:
+This plugin also brings VibeHost's MCP server (`vibehost`, `https://api.vibehost.com/mcp`). When `vibehost --version` fails but the server's tools are in the session, deploy with them ([The MCP server](#the-mcp-server)) instead of installing the CLI.
+
+Otherwise install the CLI by downloading the installer, reviewing it, then running it — don't pipe it straight into a shell:
 
 ```bash
 # macOS / Linux; installs one static binary, user-level only (no sudo)
@@ -45,7 +47,7 @@ Auth can come from any of: a prior `vibehost login` (token in `~/.config/vibehos
 
 ## Recommended path: the CLI
 
-The `vibehost` CLI bundles app-creation, file hashing, blob upload, and the deploy into one command with progress output. Prefer it whenever you can run shell commands.
+The `vibehost` CLI bundles app-creation, file hashing, blob upload, and the deploy into one command with progress output. Prefer it whenever it is installed and you can run shell commands.
 
 ```bash
 vibehost app create my-app                  # once per app; name: lowercase, 2–40 chars, [a-z][a-z0-9-]*
@@ -62,9 +64,11 @@ The `--json` output is `{ ok: true, data: { url, immutableUrl, ... } }`. The com
 
 Tip: `vibehost link --app my-app` inside the project writes `.vibehost/project.json`, after which plain `vibehost deploy` works with no flags.
 
-## Without a shell: the MCP server
+## The MCP server
 
-If you can't run a shell but have an MCP connection to `https://api.vibehost.com/mcp`, the deploy is a sequence of tool calls. **Read each tool's own `description` for the authoritative parameter schema** — the names and order are below, but don't hardcode argument shapes from this doc.
+Use it when you can't run a shell, or when the CLI isn't installed and the server's tools are in the session (this plugin brings the server). The deploy is a sequence of tool calls. **Read each tool's own `description` for the authoritative parameter schema** — the names and order are below, but don't hardcode argument shapes from this doc.
+
+**Signing in.** Until the user signs in, Claude Code lists only the server's `authenticate` tool. Call it, give the user the URL it returns (sign in, then approve), and the other tools appear once they approve. If their browser ends on a `localhost` page that doesn't load, pass that page's full address to `complete_authentication`. Codex: `codex mcp login vibehost`.
 
 1. `list_apps` — find existing apps in the workspace.
 2. `create_app` — only if the target doesn't exist (`{ name, workspaceId }`).

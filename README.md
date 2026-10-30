@@ -4,7 +4,7 @@ Agent skills for [GNTC](https://gntc.com)'s products, packaged as plugins for Cl
 
 ## Install
 
-A plugin installs all of its skills in one step: `vibehost` brings `vibehost-deploy`, `vibehost-pumpkin-patch` and `vibehost-haunted-farm`.
+A plugin installs all of its skills in one step: `vibehost` brings `vibehost-deploy`, `vibehost-pumpkin-patch` and `vibehost-haunted-farm`, plus VibeHost's MCP server (`https://api.vibehost.com/mcp`). The server signs in with OAuth the first time it's used: in Claude Code run `/mcp` (or let Claude call its `authenticate` tool), in Codex run `codex mcp login vibehost`. The `npx skills` install below brings the skills only.
 
 ### Claude Code
 
@@ -88,6 +88,7 @@ plugins/
   vibehost/
     .claude-plugin/plugin.json
     .claude-plugin/icon.png                  # listing icon in the Claude plugin directory
+    .mcp.json                                # VibeHost's MCP server (remote, OAuth)
     skills/vibehost-deploy/SKILL.md
     skills/vibehost-pumpkin-patch/SKILL.md   # + the template, art and build scripts it uses
     skills/vibehost-haunted-farm/SKILL.md    # + the template, art, build and check scripts it uses
@@ -112,6 +113,7 @@ claude plugin validate --profile directory --strict plugins/vibehost
 
 - The plugin needs a license: the `LICENSE` at the repository root counts for every plugin under `plugins/`, and each `plugin.json` also sets `"license": "MIT"`.
 - `.claude-plugin/icon.png` (a square PNG, 512 to 2048 px, under 2 MB) becomes the listing icon only the first time the plugin is saved or submitted in the portal. Changing it later doesn't change the listing.
+- A plugin that ships a remote MCP server (`plugins/vibehost/.mcp.json`) needs `privacyPolicyUrl` in its `plugin.json`. The directory also asks for the server itself to be submitted as an MCP connector at the same URL, so people who have both see one set of tools.
 - The directory reads every file that isn't an image or font only up to 256 KiB, and holds any other binary (`.ico`, `.zip`, …) for review. Keep scripts and templates under that size and generate other binaries at build time.
 
 ## License

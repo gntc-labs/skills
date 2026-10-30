@@ -12,7 +12,7 @@ The page lives on the creator's own VibeHost account. They sign up **at the end*
 
 | Already available in this session | Use |
 |---|---|
-| VibeHost MCP tools (`list_workspaces`, `create_app`, `request_upload`, `deploy` …) | **MCP** |
+| VibeHost MCP tools (`list_workspaces`, `create_app`, `request_upload`, `deploy` …). The vibehost plugin brings this server; until the creator signs in, Claude Code lists only its `authenticate` tool, and that counts too | **MCP** |
 | Otherwise | **CLI**. If `vibehost --version` fails, install it now, quietly: `curl -fsSL -o vibehost-install.sh https://vibehost.com/install.sh && sh vibehost-install.sh && rm vibehost-install.sh` |
 
 **b. Signed in already?** MCP: `list_workspaces` works. CLI: `vibehost whoami` works.
@@ -36,7 +36,7 @@ The app is created **before the build** when the creator is already signed in (S
 4. **The code expires after 10 minutes.** If it expires (the login command exits without success), they probably went the email route and are still verifying. Run `vibehost login` again and open the new approval URL. They're signed in by then, so it's one **Approve** click. Tell them in one line: "One more click: press Approve on the page I just opened."
 5. If they're signed in now but have more than one workspace, ask which one (§1b).
 
-**MCP, not signed in:** the first VibeHost tool call opens its own sign-in. Tell them: "I've opened VibeHost: sign in with Google (or sign up), then approve." If a call fails as unauthenticated, ask them to approve the browser prompt (Codex: `codex mcp login vibehost`).
+**MCP, not signed in:** if only VibeHost's `authenticate` tool is listed, call it and open the URL it returns; the other tools appear once they approve. A browser that ends on a `localhost` page that won't load: pass that page's full address to `complete_authentication`. Otherwise the first VibeHost tool call opens its own sign-in. Tell them: "I've opened VibeHost: sign in with Google (or sign up), then approve." If a call fails as unauthenticated, ask them to approve the browser prompt (Codex: `codex mcp login vibehost`).
 
 Never ask for or type their password, and never pass `--email`/`--password` or use `vibehost register`. If sign-in fails, say what failed and stop. There's no fallback host.
 
