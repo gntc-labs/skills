@@ -89,6 +89,7 @@ plugins/
     .claude-plugin/plugin.json
     .claude-plugin/icon.png                  # listing icon in the Claude plugin directory
     .mcp.json                                # VibeHost's MCP server (remote, OAuth)
+    README.md                                # what the plugin reads, stores and sends where (the directory's data-handling answers)
     skills/vibehost-deploy/SKILL.md
     skills/vibehost-pumpkin-patch/SKILL.md   # + the template, art and build scripts it uses
     skills/vibehost-haunted-farm/SKILL.md    # + the template, art, build and check scripts it uses
@@ -114,6 +115,7 @@ claude plugin validate --profile directory --strict plugins/vibehost
 - The plugin needs a license: the `LICENSE` at the repository root counts for every plugin under `plugins/`, and each `plugin.json` also sets `"license": "MIT"`.
 - `.claude-plugin/icon.png` (a square PNG, 512 to 2048 px, under 2 MB) becomes the listing icon only the first time the plugin is saved or submitted in the portal. Changing it later doesn't change the listing.
 - A plugin that ships a remote MCP server (`plugins/vibehost/.mcp.json`) needs `privacyPolicyUrl` in its `plugin.json`. The directory also asks for the server itself to be submitted as an MCP connector at the same URL, so people who have both see one set of tools.
+- The directory's **Data handling** step asks whether any skill sends data to a service other than the declared connectors; the answer "Yes" points reviewers at the plugin's README. `plugins/vibehost/README.md` lists every such service and what the skills store, so update it when a skill starts calling something new.
 - The directory reads every file that isn't an image or font only up to 256 KiB, and holds any other binary (`.ico`, `.zip`, …) for review. Keep scripts and templates under that size and generate other binaries at build time.
 
 ## License
