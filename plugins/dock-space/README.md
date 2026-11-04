@@ -28,10 +28,9 @@ In an older Claude Code, run `/plugin marketplace add gntc-labs/skills`, then `/
 The skills are Dock's own pages, the same text the server's `dock_skill` tool returns and app.dock.space publishes at `/.well-known/agent-skills/`. They are copied from `packages/dock-mcp-core/skills/` at Dcard/Dock commit `e357fc0626a52cccc579e8e3ebcceaea71b0f6d0` by [`scripts/sync-dock-skills.mjs`](../../scripts/sync-dock-skills.mjs). The script changes these lines and leaves every other byte as Dock wrote it:
 
 - In `dock-slides/SKILL.md` it points the module links at the files (`plan/SKILL.md` becomes `references/plan.md`) and says where a `dock-slides/<module>` name lives on disk, so an agent without `dock_skill` can open them.
-- In `dock-slides-visual/SKILL.md`, three lines that the Claude plugin directory reads as a skill handing a credential to a remote host:
+- In `dock-slides-visual/SKILL.md`, two lines that the Claude plugin directory reads as a skill handing a credential to a remote host:
   - The headless Chrome example opens `file://$(realpath orbit)/index.html` instead of building the path from the shell's working-directory variable, which the directory takes for a password.
   - The sentence after "ONE `DrawImage` op" names `dock_slides_verb_describe` at its end, because the directory takes the word "op" right before "Read", or right before a code span, for the 1Password CLI.
-  - "(text glow and shadow too)" is written with "and" instead of a slash, because the directory takes a slash right before "shadow" for the Unix password file.
 
   The script stops if a copied page still holds a shell variable or any of those patterns.
 

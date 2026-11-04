@@ -39,9 +39,8 @@ const REWRITES = [
   ],
   ['dock-slides/SKILL.md', /\]\(([a-z-]+)\/SKILL\.md\)/gu, '](references/$1.md)'],
   // The Claude plugin directory holds a skill page that names a remote host and reads a credential
-  // (MCP_FORWARDS_CREDENTIAL_ENV). It takes PWD for a password, "op" then "read" (across
-  // punctuation and line breaks) or "op" then a code span for the 1Password CLI, and "/ shadow"
-  // for /etc/shadow.
+  // (MCP_FORWARDS_CREDENTIAL_ENV). It takes PWD for a password, and "op" then "read" (across
+  // punctuation and line breaks) or "op" then a code span for the 1Password CLI.
   [
     'dock-slides-visual/SKILL.md',
     '"file://$PWD/orbit/index.html#still"',
@@ -52,14 +51,12 @@ const REWRITES = [
     'op. Read them with `dock_slides_verb_describe`.',
     'op; each one\'s arguments are in `dock_slides_verb_describe`.',
   ],
-  ['dock-slides-visual/SKILL.md', '(text glow / shadow too)', '(text glow and shadow too)'],
 ];
 // What that check reads as a credential. A match left in a copied page needs a rewrite above.
 const CREDENTIAL_READS = [
   ['shell variable', /\$\{?[A-Z_][A-Z0-9_]*\b/gu],
   ['1Password `op read`', /\bop\W+read\b/giu],
   ['1Password `op` with a command substitution', /\bop[.;,:]?\s+[`$]/giu],
-  ['/etc/shadow password store', /\/\s*shadow\b/giu],
 ];
 
 const sha = git(['rev-parse', '--verify', `${ref}^{commit}`]).trim();
