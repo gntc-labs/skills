@@ -30,10 +30,10 @@ The skills are Dock's own pages, the same text the server's `dock_skill` tool re
 - In `dock-slides/SKILL.md` it points the module links at the files (`plan/SKILL.md` becomes `references/plan.md`) and says where a `dock-slides/<module>` name lives on disk, so an agent without `dock_skill` can open them.
 - In `dock-slides-visual/SKILL.md`, three lines that the Claude plugin directory reads as a skill handing a credential to a remote host:
   - The headless Chrome example opens `file://$(realpath orbit)/index.html` instead of building the path from the shell's working-directory variable, which the directory takes for a password.
-  - The sentence after "ONE `DrawImage` op" says what `dock_slides_verb_describe` gives, because the directory takes the word "op" right before "Read" for the 1Password CLI.
+  - The sentence after "ONE `DrawImage` op" names `dock_slides_verb_describe` at its end, because the directory takes the word "op" right before "Read", or right before a code span, for the 1Password CLI.
   - "(text glow and shadow too)" is written with "and" instead of a slash, because the directory takes a slash right before "shadow" for the Unix password file.
 
-  The script stops if a copied page still holds a shell variable or either of those word pairs.
+  The script stops if a copied page still holds a shell variable or any of those patterns.
 
 To update them, change the skills in Dock, then copy the commit that app.dock.space serves:
 
