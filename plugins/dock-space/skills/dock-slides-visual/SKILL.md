@@ -81,7 +81,7 @@ them together, eight per call (`dock-slides/check`).
 - **One op per element.** A shape, text box or line with its fill (solid, gradient, alpha),
   outline, glow, shadow and styled paragraphs (text glow / shadow too) is ONE `DrawShape` /
   `DrawLine` op; a picture with its crop, opacity, rounded or preset frame, border, glow and shadow
-  is ONE `DrawImage` op. Read them with `dock_slides_verb_describe`. Style with separate verbs only
+  is ONE `DrawImage` op. `dock_slides_verb_describe` gives each one's arguments. Style with separate verbs only
   what they do not carry: custom geometry, texture and picture fills, blend, 3-D, WordArt, a
   picture's recolour.
 - **Shapes that share a look: ONE `DrawStyled` op.** Name each look once in `styles` (every

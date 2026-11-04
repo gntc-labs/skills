@@ -38,16 +38,25 @@ const REWRITES = [
     'With no `dock_skill`, read each linked file; a `<skill>/<module>` name on any page is the file `<skill>/references/<module>.md` in this skills folder.',
   ],
   ['dock-slides/SKILL.md', /\]\(([a-z-]+)\/SKILL\.md\)/gu, '](references/$1.md)'],
-  // The Claude plugin directory holds a skill that passes a shell variable to a command on a page
-  // that names a remote host: it reads PWD as a password.
+  // The Claude plugin directory holds a skill page that names a remote host and reads a credential
+  // (MCP_FORWARDS_CREDENTIAL_ENV). It takes PWD for a password, and "op" then "read" for the
+  // 1Password CLI's `op read`, across punctuation and line breaks.
   [
     'dock-slides-visual/SKILL.md',
     '"file://$PWD/orbit/index.html#still"',
     '"file://$(realpath orbit)/index.html#still"',
   ],
+  [
+    'dock-slides-visual/SKILL.md',
+    'op. Read them with `dock_slides_verb_describe`.',
+    'op. `dock_slides_verb_describe` gives each one\'s arguments.',
+  ],
 ];
-// Any `$NAME` / `${NAME}` left in a copied page is the same hold; add a rewrite for it.
-const SHELL_VARIABLE = /\$\{?[A-Z_][A-Z0-9_]*\b/gu;
+// What that check reads as a credential. A match left in a copied page needs a rewrite above.
+const CREDENTIAL_READS = [
+  ['shell variable', /\$\{?[A-Z_][A-Z0-9_]*\b/gu],
+  ['1Password `op read`', /\bop\W+read\b/giu],
+];
 
 const sha = git(['rev-parse', '--verify', `${ref}^{commit}`]).trim();
 const source = new Map(
@@ -66,8 +75,12 @@ for (const [page, from, to] of REWRITES) {
 }
 const pages = [...copy].filter(([file]) => file.endsWith('.md')).map(([file, bytes]) => [file, bytes.toString('utf8')]);
 
-const variables = pages.flatMap(([file, text]) => (text.match(SHELL_VARIABLE) ?? []).map(name => `${file}: ${name}`));
-if (variables.length) throw new Error(`shell variables in copied pages:\n  ${variables.join('\n  ')}`);
+const credentials = pages.flatMap(([file, text]) =>
+  CREDENTIAL_READS.flatMap(([kind, pattern]) =>
+    (text.match(pattern) ?? []).map(found => `${file}: ${kind}: ${JSON.stringify(found)}`),
+  ),
+);
+if (credentials.length) throw new Error(`credential-looking text in copied pages:\n  ${credentials.join('\n  ')}`);
 
 // Fenced code is skipped: the examples hold `](` that are not links.
 const broken = pages.flatMap(([file, text]) =>
