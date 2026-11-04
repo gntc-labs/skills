@@ -79,7 +79,7 @@ them together, eight per call (`dock-slides/check`).
   `execution:"atomic"` (one commit, about a second). A generated .pptx (section 2.1) only saves
   calls, for a sandbox agent or many repeated pages.
 - **One op per element.** A shape, text box or line with its fill (solid, gradient, alpha),
-  outline, glow, shadow and styled paragraphs (text glow / shadow too) is ONE `DrawShape` /
+  outline, glow, shadow and styled paragraphs (text glow and shadow too) is ONE `DrawShape` /
   `DrawLine` op; a picture with its crop, opacity, rounded or preset frame, border, glow and shadow
   is ONE `DrawImage` op. `dock_slides_verb_describe` gives each one's arguments. Style with separate verbs only
   what they do not carry: custom geometry, texture and picture fills, blend, 3-D, WordArt, a
