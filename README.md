@@ -4,7 +4,7 @@ Agent skills for [GNTC](https://gntc.com)'s products, packaged as plugins for Cl
 
 ## Install
 
-A plugin installs all of its skills in one step: `vibehost` brings `vibehost-deploy`, `vibehost-pumpkin-patch` and `vibehost-haunted-farm`, plus VibeHost's MCP server (`https://api.vibehost.com/mcp`). The server signs in with OAuth the first time it's used: in Claude Code run `/mcp` (or let Claude call its `authenticate` tool), in Codex run `codex mcp login vibehost`. The `npx skills` install below brings the skills only.
+A plugin installs all of its skills in one step: `vibehost` brings `vibehost-deploy`, `vibehost-pumpkin-patch` and `vibehost-haunted-farm`, plus VibeHost's MCP server (`https://api.vibehost.com/mcp`). The server signs in with OAuth the first time it's used: in Claude Code run `/mcp` (or let Claude call its `authenticate` tool), in Codex run `codex mcp login vibehost`. `dock` brings `dock-slides` and `dock-slides-visual` plus Dock's MCP server (`https://app.dock.space/v1/mcp`), which signs in the same way (`codex mcp login dock` in Codex). The `npx skills` install below brings the skills only.
 
 ### Claude Code
 
@@ -14,6 +14,7 @@ Inside Claude Code:
 /plugin marketplace add gntc-labs/skills
 /plugin install vibehost@gntc-labs
 /plugin install entrydesk@gntc-labs
+/plugin install dock@gntc-labs
 ```
 
 Or from a shell:
@@ -22,6 +23,7 @@ Or from a shell:
 claude plugin marketplace add gntc-labs/skills
 claude plugin install vibehost@gntc-labs
 claude plugin install entrydesk@gntc-labs
+claude plugin install dock@gntc-labs
 ```
 
 ### Codex
@@ -32,6 +34,7 @@ Codex reads the same `.claude-plugin/marketplace.json`, so this repo is a Codex 
 codex plugin marketplace add gntc-labs/skills
 codex plugin add vibehost@gntc-labs
 codex plugin add entrydesk@gntc-labs
+codex plugin add dock@gntc-labs
 ```
 
 In Codex the skills are prefixed with the plugin name, e.g. `vibehost:vibehost-deploy`.
@@ -44,7 +47,11 @@ npx skills add gntc-labs/skills --list       # list only
 npx skills add gntc-labs/skills --skill vibehost-deploy
 npx skills add gntc-labs/skills --skill vibehost-pumpkin-patch
 npx skills add gntc-labs/skills --skill vibehost-haunted-farm
+npx skills add gntc-labs/skills --skill dock-slides
+npx skills add gntc-labs/skills --skill dock-slides-visual
 ```
+
+The Dock skills work through Dock's MCP tools, so add the server yourself when you install them this way, e.g. `claude mcp add --transport http dock https://app.dock.space/v1/mcp`.
 
 ## Update
 
@@ -79,11 +86,20 @@ Coming soon: `vibehost-share`, `vibehost-manage-releases`, `vibehost-custom-doma
 | --- | --- |
 | `entrydesk-cli` | Chat with AI models/agents, schedule agents, and call connected SaaS tools (Slack, GitHub, Google Drive, …) from the terminal. |
 
+### `dock` — [Dock](https://dock.space) docs and slide decks
+
+| Skill | What it does |
+| --- | --- |
+| `dock-slides` | Make, draft, redo or improve a deck in Dock, from the plan through the check of the rendered slides. Loads its modules (`references/`) only when a deck needs them. |
+| `dock-slides-visual` | The look of a Dock deck built from native objects, with style packs (torn-paper collage, kinetic typography, retro CRT, board explainer, pixel art). |
+
+These are Dock's own skills, copied from Dock by `scripts/sync-dock-skills.mjs`; change them in Dock, not here (see [`plugins/dock/README.md`](plugins/dock/README.md)).
+
 ## Layout
 
 ```
 .claude-plugin/
-  marketplace.json              # marketplace manifest (plugins: vibehost, entrydesk)
+  marketplace.json              # marketplace manifest (plugins: vibehost, entrydesk, dock)
 plugins/
   vibehost/
     .claude-plugin/plugin.json
@@ -97,6 +113,15 @@ plugins/
     .claude-plugin/plugin.json
     .claude-plugin/icon.png
     skills/entrydesk-cli/SKILL.md
+  dock/
+    .claude-plugin/plugin.json
+    .claude-plugin/icon.png
+    .mcp.json                                # Dock's MCP server (remote, OAuth)
+    README.md                                # data-handling answers, and where the skills come from
+    skills/dock-slides/SKILL.md              # + references/*.md, the modules it loads
+    skills/dock-slides-visual/SKILL.md
+scripts/
+  sync-dock-skills.mjs          # copies the Dock skills from a Dcard/Dock commit
 LICENSE                         # MIT, for every plugin here
 ```
 
@@ -114,8 +139,8 @@ claude plugin validate --profile directory --strict plugins/vibehost
 
 - The plugin needs a license: the `LICENSE` at the repository root counts for every plugin under `plugins/`, and each `plugin.json` also sets `"license": "MIT"`.
 - `.claude-plugin/icon.png` (a square PNG, 512 to 2048 px, under 2 MB) becomes the listing icon only the first time the plugin is saved or submitted in the portal. Changing it later doesn't change the listing.
-- A plugin that ships a remote MCP server (`plugins/vibehost/.mcp.json`) needs `privacyPolicyUrl` in its `plugin.json`. The directory also asks for the server itself to be submitted as an MCP connector at the same URL, so people who have both see one set of tools.
-- The directory's **Data handling** step asks whether any skill sends data to a service other than the declared connectors; the answer "Yes" points reviewers at the plugin's README. `plugins/vibehost/README.md` lists every such service and what the skills store, so update it when a skill starts calling something new.
+- A plugin that ships a remote MCP server (`plugins/vibehost/.mcp.json`, `plugins/dock/.mcp.json`) needs `privacyPolicyUrl` in its `plugin.json`. The directory also asks for the server itself to be submitted as an MCP connector at the same URL, so people who have both see one set of tools.
+- The directory's **Data handling** step asks whether any skill sends data to a service other than the declared connectors; the answer "Yes" points reviewers at the plugin's README. `plugins/vibehost/README.md` and `plugins/dock/README.md` list every such service and what the skills store, so update them when a skill starts calling something new (for Dock, check after each sync).
 - The directory reads every file that isn't an image or font only up to 256 KiB, and holds any other binary (`.ico`, `.zip`, …) for review. Keep scripts and templates under that size and generate other binaries at build time.
 
 ## License

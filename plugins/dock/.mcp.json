@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "dock": {
+      "type": "http",
+      "url": "https://app.dock.space/v1/mcp"
+    }
+  }
+}

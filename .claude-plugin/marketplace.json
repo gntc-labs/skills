@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "gntc-labs",
   "version": "0.1.0",
-  "description": "GNTC Labs — agent skills and plugins for GNTC's products (VibeHost, EntryDesk)",
+  "description": "GNTC Labs — agent skills and plugins for GNTC's products (VibeHost, EntryDesk, Dock)",
   "owner": {
     "name": "GNTC Labs",
     "email": "developer@gntc.com"
@@ -28,6 +28,17 @@
         "email": "developer@gntc.com"
       },
       "source": "./plugins/entrydesk",
+      "category": "productivity"
+    },
+    {
+      "name": "dock",
+      "description": "Dock's MCP server plus the deck skills Dock's own agent uses: plan a presentation, build it from documents or web research, place charts and pictures, give it a visual style, and check the rendered slides before handing it over.",
+      "version": "0.1.0",
+      "author": {
+        "name": "GNTC Labs",
+        "email": "developer@gntc.com"
+      },
+      "source": "./plugins/dock",
       "category": "productivity"
     }
   ]
