@@ -1,5 +1,5 @@
 {
-  "name": "dock",
+  "name": "dock-space",
   "description": "Dock's MCP server plus the deck skills Dock's own agent uses: plan a presentation, build it from documents or web research, place charts and pictures, give it a visual style, and check the rendered slides before handing it over.",
   "version": "0.1.0",
   "author": {

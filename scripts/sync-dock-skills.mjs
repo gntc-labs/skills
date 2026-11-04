@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Copy Dock's agent skills (Dcard/Dock packages/dock-mcp-core/skills/) into plugins/dock/skills/.
+// Copy Dock's agent skills (Dcard/Dock packages/dock-mcp-core/skills/) into plugins/dock-space/skills/.
 //
 //   node scripts/sync-dock-skills.mjs <path to a Dcard/Dock clone> <commit or ref>
 //
@@ -8,7 +8,7 @@
 // `dock-slides/references/plan.md`, so dock-slides/SKILL.md links its modules as `plan/SKILL.md`.
 // On disk those links have to name the file, so this rewrites them to `references/plan.md`.
 // Each rewrite in REWRITES stops the sync when Dock's page no longer has the text it replaces.
-// The commit is written into plugins/dock/README.md, and each page is compared with what
+// The commit is written into plugins/dock-space/README.md, and each page is compared with what
 // app.dock.space serves now, so a copy taken ahead of production shows up before it ships.
 
 import { execFileSync } from 'node:child_process';
@@ -24,8 +24,8 @@ if (!dock || !ref) {
 const ORIGIN = 'https://app.dock.space';
 const SOURCE = 'packages/dock-mcp-core/skills/';
 const root = resolve(import.meta.dirname, '..');
-const out = join(root, 'plugins/dock/skills');
-const readme = join(root, 'plugins/dock/README.md');
+const out = join(root, 'plugins/dock-space/skills');
+const readme = join(root, 'plugins/dock-space/README.md');
 
 const git = (args, encoding = 'utf8') =>
   execFileSync('git', ['-C', dock, ...args], { encoding, maxBuffer: 64 << 20 });
@@ -81,7 +81,7 @@ if (broken.length) throw new Error(`links that reach no copied file:\n  ${broken
 
 const marker = /(Dcard\/Dock commit `)[0-9a-f]{40}(`)/u;
 const text = readFileSync(readme, 'utf8');
-if (!marker.test(text)) throw new Error('plugins/dock/README.md has no "Dcard/Dock commit `<40-hex sha>`" line');
+if (!marker.test(text)) throw new Error('plugins/dock-space/README.md has no "Dcard/Dock commit `<40-hex sha>`" line');
 
 rmSync(out, { recursive: true, force: true });
 for (const [file, bytes] of copy) {

@@ -1,4 +1,4 @@
-# Dock plugin
+# Dock plugin (`dock-space`)
 
 Dock's MCP server plus two skills for [Dock](https://dock.space), GNTC's workspace where people and AI agents make docs and slide decks together:
 
@@ -9,6 +9,8 @@ Dock's MCP server plus two skills for [Dock](https://dock.space), GNTC's workspa
 
 The MCP server is `https://app.dock.space/v1/mcp` (remote, OAuth 2.1 with dynamic client registration, so the plugin carries no token). It signs in the first time it's used: in Claude Code run `/mcp`, in Codex run `codex mcp login dock`. Using the skills needs a Dock account.
 
+The plugin is named `dock-space` because "dock" is another company's listing in the Claude plugin directory. The product is Dock, and the MCP server (`dock`, shown as `plugin:dock-space:dock`) and the skills keep Dock's names.
+
 Docs: <https://dock.space/agents> (it sets up the same server with a personal access token; the plugin signs in with OAuth instead) · Privacy: <https://dock.space/privacy> · Terms: <https://dock.space/terms>
 
 ## Install
@@ -16,10 +18,10 @@ Docs: <https://dock.space/agents> (it sets up the same server with a personal ac
 In Claude Code 2.1.275 or later:
 
 ```
-/plugin install dock --marketplace gntc-labs/skills
+/plugin install dock-space --marketplace gntc-labs/skills
 ```
 
-In an older Claude Code, run `/plugin marketplace add gntc-labs/skills`, then `/plugin install dock@gntc-labs`. In Codex: `codex plugin marketplace add gntc-labs/skills`, then `codex plugin add dock@gntc-labs`.
+In an older Claude Code, run `/plugin marketplace add gntc-labs/skills`, then `/plugin install dock-space@gntc-labs`. In Codex: `codex plugin marketplace add gntc-labs/skills`, then `codex plugin add dock-space@gntc-labs`; Codex lists the skills as `dock-space:dock-slides` and `dock-space:dock-slides-visual`.
 
 ## Where the skills come from
 
