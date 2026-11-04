@@ -589,7 +589,7 @@ r.setAnimationLoop(ms => {
 
 ```sh
 chrome --headless=new --hide-scrollbars --window-size=1280,720 --force-device-scale-factor=2 \
-  --virtual-time-budget=8000 --screenshot=fallback.png "file://$PWD/orbit/index.html#still"
+  --virtual-time-budget=8000 --screenshot=fallback.png "file://$(realpath orbit)/index.html#still"
 dock slides html-block insert <deck-id> --slide sl1 --box 0,0,960,540 --html orbit --render fallback.png
 ```
 
