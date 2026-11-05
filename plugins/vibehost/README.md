@@ -12,6 +12,16 @@ The MCP server is `https://api.vibehost.com/mcp` (remote, OAuth). It signs in th
 
 Docs: <https://docs.vibehost.com/guides/claude-code> · Privacy: <https://vibehost.com/privacy> · Terms: <https://vibehost.com/terms>
 
+## Install
+
+In Claude Code 2.1.275 or later:
+
+```
+/plugin install vibehost --marketplace gntc-labs/skills
+```
+
+In an older Claude Code, run `/plugin marketplace add gntc-labs/skills`, then `/plugin install vibehost@gntc-labs`. In Codex: `codex plugin marketplace add gntc-labs/skills`, then `codex plugin add vibehost@gntc-labs`.
+
 ## Data handling
 
 ### What the plugin reads and stores
