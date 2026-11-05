@@ -9,7 +9,7 @@ Dock's MCP server plus two skills for [Dock](https://dock.space), GNTC's workspa
 
 The MCP server is `https://app.dock.space/v1/mcp` (remote, OAuth 2.1 with dynamic client registration, so the plugin carries no token). It signs in the first time it's used: in Claude Code run `/mcp`, in Codex run `codex mcp login dock`. Using the skills needs a Dock account.
 
-The plugin is named `dock-space` because "dock" is another company's listing in the Claude plugin directory. The product is Dock, and the MCP server (`dock`, shown as `plugin:dock-space:dock`) and the skills keep Dock's names.
+The plugin is named `dock-space` because "dock" is another company's listing in the Claude plugin directory, and it is shown as "Dock Space". The product is Dock, and the MCP server (`dock`, shown as `plugin:dock-space:dock`) and the skills keep Dock's names.
 
 Docs: <https://dock.space/agents> (it sets up the same server with a personal access token; the plugin signs in with OAuth instead) · Privacy: <https://dock.space/privacy> · Terms: <https://dock.space/terms>
 
