@@ -3,8 +3,8 @@
 Load before you generate or place any picture.
 
 Every picture is a Dock asset first: `dock_asset_upload` for one you were given (several in one call
-with `url: [...]`); `dock_image_search` for real photos of named places, products and things and for
-brand logos, every slot of the deck in one call; `dock_image_generate` to draw the rest: still
+with `url: [...]`); `dock_image_search` for real photos of named places, products and things, brand logos, public
+figures and named works, species and events, every slot of the deck in one call; `dock_image_generate` to draw the rest: still
 lifes, textures, swatches and light, each abstract or of objects so it claims no fact, person or
 brand. Generation is charged to a daily budget, so ask for what you need once. Pass the `asset_…` id (`dock_slides_fill` also
 imports an https URL); never transcribe a source picture as base64. A few-KB texture tile you
@@ -31,7 +31,20 @@ source.
 
 `dock_image_search`: ask for photos only of concrete subjects (`Taipei 101`, `Gogoro scooter`), each
 with the frame's `aspect`, and pass the slide `background` so a logo comes back in a variant that
-shows on it. Place each result at its `aspect_ratio` (a frame of that shape, or `fit: cover` with
-its `suggested_crop`); never stretch it. Put its `source_url` and `attribution` in that slide's
-notes. A slot that comes back `empty` gets no picture: draw a diagram or icon for an abstract idea,
-and set a brand's name in type when its logo is missing — never another picture in its place.
+shows on it. `purpose: person` is a public figure, `purpose: entity` anything with its own Wikipedia
+article (a book, film, game, artwork, species, historical event, car model): `subject` is the name
+as the request writes it, `context` who or what it is (`Taiwanese singer`, `TSMC founder`, `2010
+film`), which is what tells a namesake apart. A person needs a `context` of at least two words, their
+country or company and their role, that matches their article. A thing's `context` must match what
+it is (`2010 film`, not who adapted it). Without one, a person stays `empty`, and so does a name with
+several meanings; a thing with only one candidate comes back with `name_only`, unconfirmed; an entity comes back as its cover or poster where it has one. At most 8
+slots a call; a logo wall of more, in further calls of 8.
+
+A licence labels a picture and never rules one out: the person building the deck decides. Place each
+result at its `aspect_ratio` (a frame of that shape, or `fit: cover` with its `suggested_crop`);
+never stretch it, and a small one (a poster is often 220 px wide) stays small. Put its `source_url`,
+`license` and `attribution` in that slide's notes, and `matched by name only` when it has `name_only`.
+The handover names every picture whose `license_status` is not `free` or that has `name_only`, with its
+slide. A slot that comes back `empty` gets no picture: draw a
+diagram or icon for an abstract idea, and set a name in type when its logo or portrait is missing —
+never another picture in its place.
