@@ -24,7 +24,8 @@ style takes its pack; with none, write your own to the same detail, because a sp
 colours leaves every slide to the layout. Lock it into the deck's theme
 once, rather than recolouring slide by slide: colours through `dock_slides_edit_layout`
 `SetThemeColorScheme`, fonts through `dock_slides_edit_master_theme_fonts` `SetMasterThemeFonts`.
-Every slide then inherits it and siblings cannot drift.
+Every slide then inherits it and siblings cannot drift. A 精緻 / Polished deck whose instructions
+name `dock-slides-visual/bespoke` takes its art direction from that page instead.
 
 ## Show the plan
 

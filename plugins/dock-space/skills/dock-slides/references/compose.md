@@ -14,7 +14,7 @@ Load when you build on layouts or a roster instead of one script: create, layout
    `capacity` is measured from this deck: Chinese is about half the Latin count.
    Before shortlisting layouts, check whether a TEMPLATE deck already fits the genre: pass its id to
    `dock_slides_create` as `template` and read `dock_slides_scenes` for it (what each designed page is
-   for, its slots and capacity). `g7-team-intro` has a team page for a roster. Scenes first, layouts
+   for; call it again with `scenes` for the slots of the pages you keep). `g7-team-intro` has a team page for a roster. Scenes first, layouts
    second; a template that answers `no_scene_manifest` is read with `dock_slides_layouts` as usual.
 3. **One exemplar, then the rest.** For a repeated pattern (ten members, twelve products, a page per
    region), build ONE slide first, render it, and check it against the rubric on the core page. Only

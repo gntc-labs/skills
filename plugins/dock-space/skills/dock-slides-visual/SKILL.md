@@ -75,7 +75,10 @@ them together, eight per call (`dock-slides/check`).
 - **MCP end to end is the default.** Build several slides with ONE `dock_slides_script`
   (`dock-slides`, **Several slides of native objects: one script**): emit each slide's ops together,
   its shapes as one `DrawStyled`, and it sends neighbouring ops as one atomic apply (up to 100); the same
-  `idempotency_key` resumes it. Build or fix one slide with ONE `dock_slides_apply` call,
+  `idempotency_key` resumes it. It sends each slide's shapes first, then the ops that style them, then
+  their picture fills, which go bare (a transaction refuses media), up to 20 a call. A slide of styled
+  cards is about four applies and one script sends at most 40: about ten such slides, more with every
+  slide added first. Past that the refusal says how to split. Build or fix one slide with ONE `dock_slides_apply` call,
   `execution:"atomic"` (one commit, about a second). A generated .pptx (section 2.1) only saves
   calls, for a sandbox agent or many repeated pages.
 - **One op per element.** A shape, text box or line with its fill (solid, gradient, alpha),
@@ -133,7 +136,7 @@ them together, eight per call (`dock-slides/check`).
   ```
 
 - Find a verb with `dock_slides_verb_search`, read its fields with `dock_slides_verb_describe`
-  (`{"methods": ["SetRot"]}`), and send
+  (`{"methods": ["SetRot"]}`, up to 10 verbs a call), and send
   the NAMED form `{"method":"SetRot","slide":"sl1","shape":4,"deg":-2}`. The values below are the
   ones that worked. Describe gives each field as one line (`name?: type — note`). The note is the
   first sentence of the field's description; it ends in `…` whenever anything was left out (a long
@@ -145,25 +148,34 @@ them together, eight per call (`dock-slides/check`).
   not one Dock lacks until you have tried a second wording.
 - Send every verb on this page through `dock_slides_apply` (`ops`, `execution`, `idempotency_key`,
   `summary`), or emit it from a script. One apply call carries one slide or a small edit: up to 100
-  ops atomic once `DrawStyled` rows are expanded, 20 resumable. Creates, pictures, backgrounds, theme
-  fonts, transitions, charts, animations and HTML blocks alike. A refusal in its pre-check sends
-  nothing, so fix that op and re-send the same call. Keep it apart from `dock_slides_edit_batch`: that
+  ops atomic once `DrawStyled` rows are expanded, 20 resumable. Creates, solid and gradient
+  backgrounds, theme fonts, transitions, charts, animations and HTML blocks alike. A PICTURE (`SetShapePictureFill`, a
+  picture background, `AddImage`) rides no atomic apply: send it resumable, or emit it from a script,
+  which sends it bare for you. `DrawImage` carries its picture atomic. A refusal in its pre-check
+  sends nothing, so fix that op and re-send the same call. Keep it apart from `dock_slides_edit_batch`: that
   older batch tool refuses the background, theme-font, transition, chart and HTML-block families.
 - A single-op tool needs an `idempotency_key` too: `dock_slides_edit_link` and
   `dock_slides_edit_transition` refuse a call without one.
 - Ops that address an ordinal (a run's `p`/`r` in `StyleRange` or `SetRunText`, a table cell, a
   chart series or point) are dated by a top-level `asOfSeq` beside `ops`, from your latest read.
   When anyone else writes the deck, read again and pass the fresh `asOfSeq` before each such call.
-- **Build a slide in one batch where you can.** Create each element styled (`DrawStyled` /
-  `DrawShape` / `DrawLine` / `DrawImage`), and give whatever it does not carry to the same batch by `"@<index>"`, the index of
-  the op that made it: `{"method":"SetShapeName","slide":"sl3","shape":"@0","name":"!!motif"}`.
+- **Build a slide in one script where you can.** Create each element styled (`DrawStyled` /
+  `DrawShape` / `DrawLine` / `DrawImage`), and give whatever it does not carry by `"@<index>"`, the index of
+  the op that made it: `{"method":"SetShapeName","slide":"sl3","shape":"@0","name":"!!motif"}`. Every
+  verb takes `"@<index>"` in its `slide` and `shape` fields, in a script (`SetCustGeom`, picture fills
+  and names included) and in a resumable apply. An `effect` field does not: `AddAnimation` creates no
+  id, so its `ref` (`"an5"`) comes only from `dock_slides_get {animations:true}` after it commits, and
+  the effect's options go in a second call. An ATOMIC apply refuses any op naming another op of the
+  same call, so there name shapes an earlier call made.
   Read `dock_slides_get {geometry:"boxes"}` only to address shapes an EARLIER call made, and map their
   `{#n}` ids in creation order (on a blank slide of a new deck they run 2, 3, 4…). The `sid_…` handle
   a create returns is not an edit id.
 - New slides: `AddSlideWithLayout {slide:"end", layoutRef}` with the Blank layout's `stableRef` from
   `dock_slides_layouts` gives an empty slide, and `AddSlideOnLayout {slide:"end"}` gives empty
-  placeholders; both render blank. A bare `AddSlide` writes a literal "Click to add title" run (lint
-  reports it as `prompt-text`), so write its title or delete it.
+  placeholders; both render blank. A second `"end"` in one call means the slide the first one added,
+  a reference an ATOMIC apply refuses: add several slides from a script or a resumable apply. A
+  bare `AddSlide` writes a literal "Click to add title" run (lint reports it as `prompt-text`), so
+  write its title or delete it.
 - Text: `AddText` and `SetText` take one paragraph. Several lines go through `SetParagraphs` with
   `paras` as a JSON string: `[{"srcP":0,"segs":[{"cid":null,"text":"line 1"}]},{"srcP":0,"segs":[{"cid":null,"text":"line 2"}]}]`.
   Style a whole box with `StyleShape attr ∈ b, sz, color, spc, font, eafont` (values are strings:
@@ -186,8 +198,12 @@ raw base64 bytes or a `dock-asset://asset_…`. Pick the path by what you are ru
 | ----------------------------------------------------------------- | --------------------------------------------------------- |
 | An agent with a code sandbox behind Dock's remote MCP (EntryDesk) | **A**: generate in the sandbox, hand Dock its `ed://` uri |
 | An agent on the local Dock MCP server (stdio)                     | `dock_asset_upload` with `file_path`                      |
+| An agent with a shell and the `dock` CLI (`dock mcp call`)        | `dock file upload <path>`; its `id` is the `asset_…`      |
 | Any agent that can produce a few KB of PNG bytes                  | **B**: base64 straight into the slot                      |
 | No code at all                                                    | **C**: native-only texture, or `dock_image_generate`      |
+
+`file_path` exists only on the stdio server, where the file is on your own machine. Dock's remote
+MCP, which `dock mcp call` also talks to, takes `url` alone and refuses `file_path`.
 
 **A: sandbox → `ed://` uri → asset.** EntryDesk's sandbox has Python with pillow and numpy
 (`pip install python-pptx` works too).
@@ -235,6 +251,10 @@ after your own MCP edits, so replace a deck before you style it with verbs, or s
 ## 3. Recipes
 
 ### 3.1 Torn-paper card
+
+Emit every card of the deck from one `dock_slides_script`: each step below names its shape by `"@<index>"`,
+and the script sends the face's picture fill bare. The rim's fill, outline, shadow and rotation can ride
+its `DrawShape` instead of steps 3, 4 and 6.
 
 1. `AddShape {x,y,w,h, geom:"rect"}` twice: the rim, and the face inset 6 pt each side.
 2. `SetCustGeom {x,y,w,h, path}` on each, with the same box as the shape. `path` is integer EMU
@@ -320,8 +340,20 @@ on it. Read it back as the slide's `background.kind`, not as an item.
    only if they pair AND slide B plays Morph.
 4. Morph a line or band only between slides where it keeps its orientation. Morph interpolates
    width and height together, so a rule that turns from horizontal to vertical passes through a
-   fat block halfway. Play also pairs same-kind rectangles by itself, so renaming the `!!` names
-   leaves the pairing in place: give the destination slide a fade instead.
+   fat block halfway.
+5. Without a `!!` name, Play also pairs objects by itself: text boxes with the same words, and
+   same-kind shapes. To keep one object out of the Morph (that rule, a word that should leave),
+   give it a `!!` name the other slide does not carry. A `!!` object pairs only with the same `!!`
+   name, so it fades out and its counterpart fades in; the filmstrip shows the change.
+6. Keep a `!!` pair's words the same on both slides; then the text resizes with the box. When the
+   words change, Morph cross-fades the old and new text, each at its own size, while the box
+   tweens: large words spill out of a shrinking box over the next slide's objects (a Collage cover
+   title morphing into the agenda's strip). Put such words in a text box of their own, with a
+   different `!!` name on each slide so they fade, and Morph only the shape behind them.
+7. Between slides of different backgrounds, byObject cross-fades the paper; byWord and byChar keep
+   the leaving slide's paper until the last frame, then jump. **Today (#31227):** the filmstrip's
+   fidelity line `the slide background jumps on the last frame` appears under byObject too, where
+   its cells show the cross-fade; judge byObject by the cells.
 
 ### 3.7 Transitions
 
@@ -348,7 +380,7 @@ was recorded in Play on staging (2026-10-21):
 | Kind          | What moves                                                                                                   | Suits                                                      | Option (`SetTransitionOption`)                        | Length          | PowerPoint plays |
 | ------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- | ----------------------------------------------------- | --------------- | ---------------- |
 | `cascade`     | objects fade out one at a time in shape-tree order, then the new ones fade in in theirs                      | a quiet, ordered change; text slides                       | — (`stagger`, below)                                  | 80 ms an object | fade             |
-| `flow`        | objects slide off along the direction and the new ones slide in behind them, staggered; the paper stays      | slides with the same structure; a sequence                 | `l` `u` `r` `d`                                       | ~1.1 s          | fade             |
+| `flow`        | objects slide off along the direction and the new ones slide in behind them, staggered; the paper stays      | slides with the same structure; a sequence                 | `l` `u` `r` `d`                                       | 750 ms          | fade             |
 | `colorWipe`   | bands in the two slides' paper colours and two tints sweep across, then the new slide wipes in               | a change of section between slides of different paper      | `l` `u` `r` `d`, corners `lu` `ru` `ld` `rd`; `bands` | ~0.8 s          | wipe             |
 | `chop`        | the new slide swings in about a corner like a blade                                                          | a hard, fast break                                         | `cw`/`ccw` then the corner, e.g. `cw-tl`              | 500 ms          | wheel, one spoke |
 | `table`       | the page lies back like a tabletop; objects slide off along it and the new ones slide on                     | a table or a list that is replaced                         | `l` `r`                                               | 1500 ms         | fade             |
@@ -409,8 +441,10 @@ act breaks (staging, 2026-10-21):
 ### 3.8 Entrances and builds
 
 - `AddAnimation {slide, shape, preset, trigger, durMs?, delayMs?}` appends to the slide's sequence;
-  `shape` is the numeric id. The default build is the motion score's (section 0): `floatIn`,
-  `durMs:500`, then smoothEnd (below), which reads back as `decel: 60000`.
+  `shape` is the numeric id. A new `wipe` comes from the bottom, as in PowerPoint; on a line or bar
+  wider than tall, follow it with `SetAnimationDirection 8` (below). The default build is the
+  motion score's (section 0): `floatIn`, `durMs:500`, then smoothEnd (below), which reads back in
+  the effect's `options` as `decel: "60000"`, a string.
 - `trigger:"onClick"` puts the effect on the presenter's click: use it for every build the motion
   score cues to a line. A slide's first effect with `afterPrev` or `withPrev` starts with the slide,
   no click; keep that for a signature moment. Build a row of separate objects as one leader plus
@@ -451,9 +485,37 @@ act breaks (staging, 2026-10-21):
 - A chart: `dock_slides_upsert_chart` (`dock-slides/charts`), then `EditChart {patch:"{\"legend\":\"none\",\"chartTitle\":\"\",\"gridlines\":false,\"valAxis\":false,\"catAxis\":false,\"dataLabels\":\"none\"}"}`
   and `SetChartPointColor` for the one highlighted bar. Chart text on a dark slide: the same patch's
   `elementFont`, e.g. `"catAxis/color=FFFFFF|valAxis/color=FFFFFF|legend/color=FFFFFF"` (also
-  `size`, `bold`, `family`; the element must be shown).
-- Chart build: a `wipe` on the chart, `SetAnimationDirection 4`, then
+  `size` in points, `bold=on` / `bold=off`, `family`; the element must be shown).
+- In an `EditChart` patch, number formats (`labelNumFmt`, `valAxisNumFmt`) are a closed list:
+  `""` (linked to source), `0`, `0.0`, `0.00`, `#,##0`, `#,##0.00`, `0%`, `0.0%`, `0.00%`, `"$"#,##0`,
+  `"$"#,##0.00`. A custom code such as `0.0"%"` is refused, so send percentages as fractions (0.488)
+  with `0.0%`. A waterfall's `labelNumFmt` (`EditChartEx`) is its own list: describe that verb.
+- Chart build: a `wipe` on the chart with `trigger:"onClick"`, `SetAnimationDirection 4`, then
   `SetAnimationChartBuild {build:"category", animBg:0}`. It needs the chart alone in its click group.
+  The build makes one effect per category, each on its own click (10 categories, 10 clicks; read
+  their refs from `dock_slides_get {animations:true}`). To play them on one click, send
+  `SetAnimationTrigger {trigger:"afterPrev"}` for every effect after the first, one per call.
+  **Today (#29074):** the build is refused (`animation_build_refused`) on an effect that is not
+  `onClick`, so set the build first and change the triggers after.
+  Dock plays a build one element per click only on a 2-D clustered column chart (one plot, no
+  trendline or data table; data labels on or off) whose every effect is that one Wipe or Fade
+  build, each step `onClick` or `afterPrev` with no Delay, Repeat or other option. Any other chart
+  (horizontal bars, stacked, line, pie) plays the whole chart once on the first step and the later
+  clicks show nothing new; lint warns `anim-chart-build-whole` with the reason. On such a chart,
+  add one whole-chart entrance instead of a build.
+- A SmartArt diagram: `AddDiagram {slide, layout, x, y, w, h, nodes, seed}` (its fields:
+  `dock_slides_verb_describe`). `layout` is a short id (`process1` Basic Process, `default` Basic
+  Block List, `cycle2`, `venn1`, `orgChart1`, `radial1`, `hierarchy1`, `pyramid1`, …); `nodes` is
+  the text pane, one line per node and a tab before each level (`"CEO\n\tCTO\n\tCFO"`); `seed` is a
+  fresh UUID. Dock draws each layout only for the trees and frames it was measured on, and refuses
+  any other before sending, naming the tree and frame that draw (`radial1 … measured on only as 1
+top nodes with 4 child nodes each in 720 x 420 pt`): give it that tree in that frame. Measured
+  at 720 × 420 pt, these drew in the server render: `process1` (4 nodes), `default` (5), `cycle2`
+  (5), `venn1` (3), `orgChart1` (1 top, 3 under it), `radial1` (1 top, 4 around it). **Today
+  (#31204):** `hierarchy1` (1 top, 3 or 7 under it) and `pyramid1` (3) are accepted and show an
+  empty frame in the server render, thumbnails and the filmstrip; lint reports `dropped-content`,
+  which cannot be accepted, for `hierarchy1` and nothing for `pyramid1`. Render every diagram
+  slide; when the diagram is blank, draw it from native shapes.
 - Many small blocks (pixel art, LED bars, progress cells, a dotted rule) are ONE custGeom with many
   `M…Z` subpaths. A smooth curve is custGeom with `C` segments, `SetShapeFill "none"` and a
   `SetShapeLine`. Arrows: `AddLine {head:"none", tail:"triangle"}`, `SetLineDash "dash"`.
@@ -510,6 +572,22 @@ same way and draws the Fallback in this machine's Chrome. Over remote MCP, send 
 block keeps a 64×64 placeholder until `SetHtmlBlockSource` writes a `png` (pass that call a fresh
 top-level `asOfSeq` or it is refused `stale_ordinal`). `set-source --html <dir>` replaces a block's
 page the same way.
+
+**An SVG picture** (an `.svg` inserted as a picture, or PowerPoint's own) is edited by its SVG, not by a
+render: the deck read with `facets: ["source"]` gives the SVG as text, and `SetSvgPictureSource` on
+`dock_slides_apply` with the slide, the shape, `svg` as base64 of the whole new SVG and that read's
+`asOfSeq` replaces it (CLI: `dock slides svg-picture get` / `set-source --svg <file>`). Leave `png` out:
+the edit stage draws the SVG at once, and an editor with the deck open draws the picture thumbnails and
+exports show, which keep a grey placeholder until then. Script, `foreignObject`, event handlers and
+links out of the document are refused, not stripped.
+
+To make an SVG picture editable, split it, as the editor's 拆成圖層 does:
+`dock slides svg-picture split <deck-id> --slide <sl> --shape <id> --json` replaces it, in place, with the
+shapes, paths and text boxes its SVG draws, in one group that keeps its alt text. Like `html-block
+convert` it needs Chrome, Chromium or Edge on the machine: the shapes are compared with the picture there
+before anything is written. It refuses, with nothing written, a flipped, grouped or cropped picture, one
+with an outline, effect, link or lock, and an SVG using filters, masks, clip paths, gradients, embedded
+images, markers or a stylesheet. 「Revert this run」 takes it back until the deck is checkpointed past it.
 
 **The Fallback.** Photograph the page yourself and pass it as `--render`: the CLI's own browser
 gives up on heavy animated WebGL and leaves the grey placeholder (#27038). Shoot the frame
@@ -654,7 +732,8 @@ nearest-neighbour upscaled PNGs (path A or B). Motion: transition checker 600–
 
 **Your own art direction.** With no named style, write one from the brand and the argument to the
 same detail as a pack above. Where nothing better comes to mind, start from this kit; a better idea
-replaces any line of it once the plan says why.
+replaces any line of it once the plan says why. A 精緻 / Polished deck whose instructions name
+`dock-slides-visual/bespoke` never starts from it: that page designs the deck from its subject.
 
 - Background: a gradient (3.5) on most slides, `type=radial` on an inversion slide.
 - Cards and bands: `DrawShape` with a two-stop gradient and the soft shadow of 3.1.
@@ -681,6 +760,7 @@ outside that set, and glow leaves lint an `overflow` it cannot accept (section 6
 | Chiron Hei HK H (heavy CJK)                         | 900    | 900           | 900                 | embedded     |
 | Blend                                               | ✔      | ✔             | normal (#23049)     | normal       |
 | Morph `!!`                                          | —      | —             | ✔                   | `p159:morph` |
+| Morph between two backgrounds (3.6)                 | —      | —             | byObject cross-fade | `p159:morph` |
 | Dock Original transitions (3.7)                     | —      | —             | ✔                   | fallback     |
 | Slide 1 transition                                  | —      | —             | ✔                   | written      |
 | Appear By Letter                                    | —      | —             | whole line (#24908) | written      |
@@ -709,8 +789,10 @@ outside that set, and glow leaves lint an `overflow` it cannot accept (section 6
    Such a key absorbs only a finding with exactly those objects, so a second word that slipped off
    the same slide still stands. A styled deck is done with lint when the whole-deck lint, given
    those keys, is `clean`, except for glow that reports `overflow`, which cannot be accepted: list
-   each such slide in the handover.
-4. `dock_slides_verify` for slide count, titles and Morph pairs.
+   each such slide in the handover. One lint call takes at most 64 `accept` keys; a deck that
+   layers more on purpose (a collage deck can need 60 and up) is linted in groups of slides
+   (`slides`), each call with its own slides' keys, and is done when every group is `clean`.
+4. `dock_slides_verify` for slide count, titles and Morph pairs, at most 50 checks a call.
 5. `dock_slides_export {format:"pptx"}` and check each slide part for `<p:transition>`, `<p:timing>`,
    `p159:morph` and the `!!` names.
 6. Motion is accepted from the filmstrip: `dock_slides_render {slides:[…], motion:{}}` answers one
