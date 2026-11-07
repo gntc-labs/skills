@@ -163,10 +163,15 @@ them together, eight per call (`dock-slides/check`).
   `DrawShape` / `DrawLine` / `DrawImage`), and give whatever it does not carry by `"@<index>"`, the index of
   the op that made it: `{"method":"SetShapeName","slide":"sl3","shape":"@0","name":"!!motif"}`. Every
   verb takes `"@<index>"` in its `slide` and `shape` fields, in a script (`SetCustGeom`, picture fills
-  and names included) and in a resumable apply. An `effect` field does not: `AddAnimation` creates no
-  id, so its `ref` (`"an5"`) comes only from `dock_slides_get {animations:true}` after it commits, and
-  the effect's options go in a second call. An ATOMIC apply refuses any op naming another op of the
-  same call, so there name shapes an earlier call made.
+  and names included) and in a resumable apply. In a script, an `effect` field takes the index of an
+  `AddAnimation` too and names the effect it added, so a wipe and its direction are one script:
+  `{"method":"SetAnimationDirection","slide":"sl3","effect":"@1","direction":8}`. Its ref comes back
+  in `minted`. A re-send under the same key replays the `AddAnimation` without reading its ref back, so
+  once it is written, send the ops still unwritten as a new script under a fresh key with the ref in place
+  of its `"@<index>"`, as a stopped run's `fix` says; another edit landing on that slide meanwhile stops
+  the run there too. Outside a script, and in an anchor (`"an5:before"`), an effect is its `ref` from
+  `dock_slides_get {animations:true}` after the `AddAnimation` commits. An ATOMIC apply refuses any op
+  naming another op of the same call, so there name shapes an earlier call made.
   Read `dock_slides_get {geometry:"boxes"}` only to address shapes an EARLIER call made, and map their
   `{#n}` ids in creation order (on a blank slide of a new deck they run 2, 3, 4…). The `sid_…` handle
   a create returns is not an edit id.

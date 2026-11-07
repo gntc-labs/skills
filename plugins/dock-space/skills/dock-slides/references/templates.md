@@ -9,7 +9,9 @@ it. The path is four calls, not one per run:
 1. Bring the pages in: `dock_slides_create` with `template`, or `dock_slides_insert_from_asset` (an
    uploaded .pptx, or `template` for a template's pages in a deck you already have).
 2. `dock_slides_get` — each shape line is `{#id name} text` (`name` printed when the shape has its own;
-   a name two shapes share prints on both and fills by `#id`). A paragraph whose runs look different — a big number and a small unit —
+   a name two shapes share prints on both and fills by `#id`; a name ending in a space and digits,
+   `Rectangle 3` or `control 2`, reads as PowerPoint's default and is not printed, though it is stored:
+   `geometry: true` shows it as `name`, so name a shape you will read back `control-2`). A paragraph whose runs look different — a big number and a small unit —
    prints as a JSON array of display segments: `- {#8} [["NT$ 12.40","M"],"較計畫 +1.6%"]`. With a
    scene manifest, also read `dock_slides_scenes` twice: once with no `scenes` (what each scene is
    for, its `needs` and slot names), then with `scenes` set to the ones you keep, for their slots.
