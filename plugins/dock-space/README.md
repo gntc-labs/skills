@@ -34,6 +34,8 @@ The skills are Dock's own pages, the same text the server's `dock_skill` tool re
 
   The script stops if a copied page still holds a shell variable or any of those patterns.
 
+On top of that copy, a partial sync took only the tool-level paragraphs from Dcard/Dock commit `73f7e6c8efec2a783235e01893dfcbcf846426a2`: the rename of `dock_slides_scenes` to `dock_slides_template_pages`, the new tools `dock_slides_templates`, `dock_slides_svg_picture_generate` and `dock_pdf_extract_images`, and the paragraphs whose tool arguments or answer fields changed, in Dock's words. That commit's other changes are not here yet: its visual, layout, motion, font and picture advice, and the `link` and `site-craft` modules. The next full run of the script brings them in; drop this paragraph then.
+
 To update them, change the skills in Dock, then copy the commit that app.dock.space serves:
 
 ```bash

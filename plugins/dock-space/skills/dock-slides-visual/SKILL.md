@@ -157,8 +157,10 @@ them together, eight per call (`dock-slides/check`).
 - A single-op tool needs an `idempotency_key` too: `dock_slides_edit_link` and
   `dock_slides_edit_transition` refuse a call without one.
 - Ops that address an ordinal (a run's `p`/`r` in `StyleRange` or `SetRunText`, a table cell, a
-  chart series or point) are dated by a top-level `asOfSeq` beside `ops`, from your latest read.
-  When anyone else writes the deck, read again and pass the fresh `asOfSeq` before each such call.
+  chart series or point) are dated by a top-level `asOfSeq` beside `ops`: the seq of the read the indexes
+  came from. A write since that moved them, your own earlier call included, is refused as stale, so read
+  again and count from that read. Straight after `dock_slides_upsert_chart`, its answer's `snapshot.seq`
+  dates the series and categories it wrote, so an `EditChart` naming them takes that seq.
 - **Build a slide in one script where you can.** Create each element styled (`DrawStyled` /
   `DrawShape` / `DrawLine` / `DrawImage`), and give whatever it does not carry by `"@<index>"`, the index of
   the op that made it: `{"method":"SetShapeName","slide":"sl3","shape":"@0","name":"!!motif"}`. Every
@@ -167,14 +169,16 @@ them together, eight per call (`dock-slides/check`).
   `AddAnimation` too and names the effect it added, so a wipe and its direction are one script:
   `{"method":"SetAnimationDirection","slide":"sl3","effect":"@1","direction":8}`. Its ref comes back
   in `minted`. A re-send under the same key replays the `AddAnimation` without reading its ref back, so
-  once it is written, send the ops still unwritten as a new script under a fresh key with the ref in place
+  pass the last answer's `minted` unchanged as the re-send's `minted` (a run the 30 s cap stopped goes on
+  that way). It is refused once anything else has written the deck since; then, and without that answer,
+  send the ops still unwritten as a new script under a fresh key with the ref in place
   of its `"@<index>"`, as a stopped run's `fix` says; another edit landing on that slide meanwhile stops
   the run there too. Outside a script, and in an anchor (`"an5:before"`), an effect is its `ref` from
   `dock_slides_get {animations:true}` after the `AddAnimation` commits. An ATOMIC apply refuses any op
   naming another op of the same call, so there name shapes an earlier call made.
   Read `dock_slides_get {geometry:"boxes"}` only to address shapes an EARLIER call made, and map their
   `{#n}` ids in creation order (on a blank slide of a new deck they run 2, 3, 4…). The `sid_…` handle
-  a create returns is not an edit id.
+  a create returns is not an edit id, except for the four SmartArt verbs the diagram bullet names.
 - New slides: `AddSlideWithLayout {slide:"end", layoutRef}` with the Blank layout's `stableRef` from
   `dock_slides_layouts` gives an empty slide, and `AddSlideOnLayout {slide:"end"}` gives empty
   placeholders; both render blank. A second `"end"` in one call means the slide the first one added,
@@ -185,8 +189,10 @@ them together, eight per call (`dock-slides/check`).
   `paras` as a JSON string: `[{"srcP":0,"segs":[{"cid":null,"text":"line 1"}]},{"srcP":0,"segs":[{"cid":null,"text":"line 2"}]}]`.
   Style a whole box with `StyleShape attr ∈ b, sz, color, spc, font, eafont` (values are strings:
   `"1"`, `"64"`, `"#111111"`); `spc` takes −5..20.
-- Display text boxes: `SetBodyPr` `ins "0,0,0,0"`, `autofit "none"`, and `wrap "none"` for big
-  words, so the editor and the server render break lines the same way.
+- Display text boxes, so the editor and the server render break lines the same way for big words:
+  draw them with `DrawShape` `text` `insets` of 0 on every side, `autofit: "none"` and `wrap: false`
+  (a boolean). On a box that exists, `SetBodyPr` takes the same as `ins "0,0,0,0"`, `autofit "none"`
+  and `wrap "none"`. The vertical anchor is `text.anchor` (`top`, `middle`, `bottom`) or `SetAnchor`.
 - Read-back is in fractions and 0–360: `SetRot -2` reads `rot: 358`, `SetFillAlpha 82` reads
   `fillFmt.alpha: 0.82`, a tile sent as `sx=100` reads `fillFmt.picture.sx: 1`. Send percent
   (`sx=100`) and expect the ratio back.
@@ -512,15 +518,28 @@ act breaks (staging, 2026-10-21):
   `dock_slides_verb_describe`). `layout` is a short id (`process1` Basic Process, `default` Basic
   Block List, `cycle2`, `venn1`, `orgChart1`, `radial1`, `hierarchy1`, `pyramid1`, …); `nodes` is
   the text pane, one line per node and a tab before each level (`"CEO\n\tCTO\n\tCFO"`); `seed` is a
-  fresh UUID. Dock draws each layout only for the trees and frames it was measured on, and refuses
-  any other before sending, naming the tree and frame that draw (`radial1 … measured on only as 1
-top nodes with 4 child nodes each in 720 x 420 pt`): give it that tree in that frame. Measured
-  at 720 × 420 pt, these drew in the server render: `process1` (4 nodes), `default` (5), `cycle2`
-  (5), `venn1` (3), `orgChart1` (1 top, 3 under it), `radial1` (1 top, 4 around it). **Today
+  fresh UUID. `process1`, `default`, `cycle2`, `venn1` and `orgChart1` take any frame and node
+  count, short of a count refused by name (`cycle2` with 2 top nodes). The measured layouts draw only
+  the trees and frames they were measured on: `radial1` one tree (1 top, 4 around it), `hierarchy1`
+  any tree of 1 top node with up to 7 nodes in the two levels under it, both at 720 × 420 pt. Any
+  other is refused before sending, naming what draws:
+  `radial1 … measured on only as 1 top nodes with 4 child nodes each in 720 x 420 pt`. Give it
+  what the refusal names. A few other layouts have a frame or count rule of their own, and their
+  refusal names it. These drew in the server render at 720 × 420 pt: `process1` (4 nodes), `default`
+  (5), `cycle2` (5), `venn1` (3), `orgChart1` (1 top, 3 under it), `radial1` (1 top, 4 around it). **Today
   (#31204):** `hierarchy1` (1 top, 3 or 7 under it) and `pyramid1` (3) are accepted and show an
   empty frame in the server render, thumbnails and the filmstrip; lint reports `dropped-content`,
   which cannot be accepted, for `hierarchy1` and nothing for `pyramid1`. Render every diagram
   slide; when the diagram is blank, draw it from native shapes.
+  Edit a diagram by its `{#n}` frame id from `dock_slides_get`, a diagram made in this session
+  included: the text, node format, layout, colour and style verbs all take it, and `node:"*"` (every
+  node) takes that id, not `0`. Four verbs on a diagram made in this session take the `sid_…` the
+  `AddDiagram` returned in `minted` instead, and their refusal names it: `SetDiagramNodeScale`,
+  `SetDiagramNodePicture`, `SetDiagramFrameBox` and `ConvertDiagram`; after a checkpoint every verb
+  but `ConvertDiagram` takes that `sid_…` too, and `ConvertDiagram` takes the number. A node's id
+  is in `dock_slides_read {facets:["text"]}`, whose `refs` may name the frame id: each node row
+  carries the `SetDiagramText` that addresses it. A refusal saying the engine gave no reading wrote
+  nothing: send the same op again.
 - Many small blocks (pixel art, LED bars, progress cells, a dotted rule) are ONE custGeom with many
   `M…Z` subpaths. A smooth curve is custGeom with `C` segments, `SetShapeFill "none"` and a
   `SetShapeLine`. Arrows: `AddLine {head:"none", tail:"triangle"}`, `SetLineDash "dash"`.

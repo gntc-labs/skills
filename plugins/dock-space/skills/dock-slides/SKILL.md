@@ -18,7 +18,7 @@ call it is for. With no `dock_skill`, read each linked file; a `<skill>/<module>
 - [`research`](references/research.md): web research, on a deck that is not 快速 / Quick.
 - [`compose`](references/compose.md): you build on layouts or a roster instead of one script.
 - [`charts`](references/charts.md): a slide carries a chart, a table or a process.
-- [`templates`](references/templates.md): the deck comes from a template, or you fill designed pages.
+- [`templates`](references/templates.md): the user asks for a template, or you fill designed pages.
 - [`pictures`](references/pictures.md): before you generate or place any picture.
 - [`html`](references/html.md): drafting a slide in HTML, with a shell.
 - [`edit`](references/edit.md): changing slides that already exist, or reading a write's answer beyond its `outcome`.
@@ -30,7 +30,7 @@ not 快速 / Quick; on 快速 / Quick, only when the user names a style or mood.
 
 ## The turn
 
-**快速 / Quick** keeps layouts and colour, pictures as set, and skips the weakest-three round: no `dock_slides_lint`, no `verify`. Any research comes first, each number's url in its note, written with `SetNotes` in the script. One `dock_slides_script`; one `dock_slides_render` pass (`slides: [1,…]`, at most 8 per call); fix only the defects you saw, without rendering again; then hand over in at most 5 lines: the deck's name (it is open), every number left unsourced, and at most two weak slides, one line each. No headings, no title list, no question.
+**快速 / Quick** keeps layouts and colour, pictures as set, and skips the weakest-three round: no `dock_slides_lint`, no `verify`. Any research comes first, each number's url in its note, written with `SetNotes` in the script. One `dock_slides_script`, its first line `// quick`; one `dock_slides_render` pass (`slides: [1,…]`, at most 8 per call); fix only the defects you saw, without rendering again; then hand over in at most 5 lines: the deck's name (it is open), every number left unsourced, and at most two weak slides, one line each. No headings, no title list, no question.
 
 **Any other deck:** load `plan` unless a plan is agreed, build with the script below, render eight slides per call, then load `check`, which also holds the full hand-over.
 
