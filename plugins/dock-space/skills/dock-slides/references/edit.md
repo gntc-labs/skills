@@ -16,7 +16,14 @@ The box keeps its size and the grown text is drawn smaller than its siblings', w
 shows: a run visibly smaller than its neighbours', or a number broken across two lines (shorten the
 text, or widen the box and its siblings together).
 
+`dock_slides_get` answers in two shapes, so a script reading it checks which: with no `slides` it is JSON whose `markdown` holds the outline (`asOfSeq`, `slideIds` beside it); with `slides` alone it is plain text, `geometry:"boxes"` lines, one per shape, under an `asOfSeq …` header line.
+
 `dock_slides_read` reads a deck by facet (text runs, links, and more; its description lists them) when you need more than `dock_slides_get` prints. An edit a person should adopt or reject goes through `dock_slides_propose` instead, and `dock_slides_render_proposal` pictures it.
+
+A script's own op count is an op index, never a shape id: it is `"@<n>"` inside that script, and a later
+call addresses the shape by the `address` its `minted` entry gives. To clear a slide, send one `DelShape`
+per shape in one script (`shape` is the `id` `outline()` gives), or `DelSlide` it and add it again on its
+layout. When the clear is refused, fix it before writing that slide.
 
 Addresses and epochs: a slide's address is what `dock_slides_get` lists for it: `sl3` for a slide
 the file came with, `sid_…` for one added in the live room. `sl3` is an address, not a place: a

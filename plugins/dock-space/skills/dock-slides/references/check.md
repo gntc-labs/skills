@@ -20,9 +20,16 @@ Load before hand-over on any deck that is not 快速 / Quick.
    lints in pages: when the answer has `next`, call again with the same arguments and
    `cursor: next` until it has none. Fix every `error`. Warnings come only from this call (a write's
    answer carries errors, plus `top-heavy` from compose): a `warning` is a judgement, so look at the
-   slide in a render, and pass `accept` only for one you looked at.
+   slide in a render, and pass `accept` only for one you looked at. `clean` stays `false` at 0 errors
+   and 0 warnings while text is in `contrastNotAssessed` (counted in `notAssessed`): contrast there
+   could not be measured, so look at those slides and pass each one's `accept` key
+   (`sl3:contrast-not-assessed`). Only off-slide and ink-overlap keys add `{#n}` ids
+   (`sl3:ink-overlap:4+7`); the param lists the rest (`sl3:tiny-text`). A finding on an object
+   several shapes share prints its own `accept` key. An `anim-*` warning has no
+   key: do what its `detail` says, or leave it, and `clean` stays `false`.
 4. `dock_slides_verify` — claims about the finished deck: slide count and order, the titles, a
    chart's categories and values, a table's cells, whether two objects will Morph-pair.
+   `contains` / `absent` take one string: one `text` check per title.
    You are done when the whole-deck lint reports no error, you have looked at the rendered slides,
    verify holds, and the motion reads back as its score (`dock-slides-visual` section 6).
    A deck whose style makes errors on purpose accepts

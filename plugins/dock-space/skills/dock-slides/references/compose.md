@@ -1,6 +1,6 @@
 # Build on layouts
 
-Load when you build on layouts or a roster instead of one script: create, layouts, scenes, compose.
+Load when you build on layouts or a roster instead of one script: create, layouts, template pages, compose.
 
 1. `dock_slides_create` — a title, and optionally `theme`, `template` or `size`. Without
    `parent_id` the deck lands in the caller's private section; say so when you hand it over.
@@ -13,8 +13,8 @@ Load when you build on layouts or a roster instead of one script: create, layout
    `refs` set to the shortlist's `stableRef`s to read their `slots` and `capacity`. A text slot's
    `capacity` is measured from this deck: Chinese is about half the Latin count.
    Before shortlisting layouts, check whether a TEMPLATE deck already fits the genre: pass its id to
-   `dock_slides_create` as `template` and read `dock_slides_scenes` for it (what each designed page is
-   for; call it again with `scenes` for the slots of the pages you keep). `g7-team-intro` has a team page for a roster. Scenes first, layouts
+   `dock_slides_create` as `template` and read `dock_slides_template_pages` for it (what each designed page is
+   for; call it again with `scenes` for the slots of the pages you keep). `g7-team-intro` has a team page for a roster. Template pages first, layouts
    second; a template that answers `no_scene_manifest` is read with `dock_slides_layouts` as usual.
 3. **One exemplar, then the rest.** For a repeated pattern (ten members, twelve products, a page per
    region), build ONE slide first, render it, and check it against the rubric on the core page. Only

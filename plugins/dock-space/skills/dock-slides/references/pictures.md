@@ -4,7 +4,7 @@ Load before you generate or place any picture.
 
 Every picture is a Dock asset first: `dock_asset_upload` for one you were given (several in one call
 with `url: [...]`); `dock_image_search` for real photos of named places, products and things, brand logos, public
-figures and named works, species and events, every slot of the deck in one call; `dock_image_generate` to draw the rest: still
+figures and named works, species and events; `dock_image_generate` to draw the rest: still
 lifes, textures, swatches and light, each abstract or of objects so it claims no fact, person or
 brand. Generation is charged to a daily budget, so ask for what you need once. Pass the `asset_…` id (`dock_slides_fill` also
 imports an https URL); never transcribe a source picture as base64. A few-KB texture tile you
@@ -23,17 +23,20 @@ Place a picture with the tool that writes its slide, which fits it without stret
   shape keeps the old crop); `fit: contain` shows all of it padded inside the frame, `fit: stretch`
   squeezes it. Give `AddImage` a box of the picture's own aspect ratio.
 
+An SVG picture (a vector) comes from `dock_slides_svg_picture_generate`; never write or upload one
+yourself. If it answers `png: none`, say thumbnails show a grey box until the deck is opened in the editor.
+
 Generate at whatever aspect suits the picture; the fit is a crop PowerPoint can adjust. Place it,
 then render and look: no stretch (keep the picture's own aspect ratio), a face never cropped, the
 same size and position on every sibling slide. If a source picture cannot be had as an asset, say
 in the handover which ones you left out; never drop one silently. Never hotlink or invent a picture
 source.
 
-`dock_image_search`: ask for photos only of concrete subjects (`Taipei 101`, `Gogoro scooter`), each
-with the frame's `aspect`, and pass the slide `background` so a logo comes back in a variant that
-shows on it. `purpose: person` is a public figure, `purpose: entity` anything with its own Wikipedia
-article (a book, film, game, artwork, species, historical event, car model): `subject` is the name
-as the request writes it, `context` who or what it is (`Taiwanese singer`, `TSMC founder`, `2010
+`dock_image_search`: ask for photos only of concrete subjects (`Taipei 101`), each
+with the frame's `aspect` (0.1–9), and pass the slide `background` so a logo comes back in a variant that
+shows on it, one call per background with all its slots. `purpose: person` is a public figure,
+`purpose: entity` anything with its own Wikipedia article (a book, film, game, artwork, species,
+historical event, car model): `subject` is the name as the request writes it, `context` who or what it is (`Taiwanese singer`, `TSMC founder`, `2010
 film`), which is what tells a namesake apart. A person needs a `context` of at least two words, their
 country or company and their role, that matches their article. A thing's `context` must match what
 it is (`2010 film`, not who adapted it). Without one, a person stays `empty`, and so does a name with
